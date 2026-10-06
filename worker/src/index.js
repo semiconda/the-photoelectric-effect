@@ -324,6 +324,31 @@ export class Room {
         return;
       }
 
+      /* Wipe this group and put everyone out. Unlike newSession, which starts
+         the NEXT group and lets people decide whether to join it, this clears
+         the one that is running: no players, no scores, no open question, and
+         every phone back at the join screen. For starting over after a
+         rehearsal, or when something has gone wrong. */
+      case 'resetRoom': {
+        if (who.role !== 'presenter') return;
+        const session = this.session();
+        this.sql.exec(
+          'DELETE FROM answers WHERE player_id IN (SELECT id FROM players WHERE session = ?)', session
+        );
+        this.sql.exec('DELETE FROM players WHERE session = ?', session);
+        this.sql.exec('DELETE FROM questions WHERE session = ?', session);
+        this.setState('open', null);
+
+        for (const sock of this.state.getWebSockets()) {
+          const w = sock.deserializeAttachment() || {};
+          if (w.role === 'presenter') continue;
+          sock.serializeAttachment({ role: w.role, playerId: null });
+        }
+        this.broadcast({ type: 'roomReset' });
+        this.pushStandings();
+        return;
+      }
+
       case 'setPart': {
         if (who.role !== 'presenter') return;
         this.setState('part', msg.part == null ? null : msg.part);

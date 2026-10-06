@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '2';
+const BUILD = '3';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="theme.css?v=3">
 <style>
 html, body { height: 100%; }
 
@@ -55,8 +55,8 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
                 padding: 3px 10px; white-space: nowrap; }
 .topbar .live.on { color: var(--emit); border-color: var(--emit); }
 
-/* Restart is armed by the first press and only fires on the second. */
-#restart.arming, #newgroup.arming { border-color: var(--no-emit); color: var(--no-emit); }
+/* Both of these are armed by a first press and only fire on the second. */
+#resetroom.arming, #newgroup.arming { border-color: var(--no-emit); color: var(--no-emit); }
 
 /* A question button: plain before it is asked, lit while its question is
    open, dimmed once it has been revealed. */
@@ -175,7 +175,7 @@ body.toy .joinqr { display: none; }
 <body>
 
 <div class="topbar">
-  <button type="button" id="restart">Restart</button>
+  <button type="button" id="resetroom">Reset room</button>
   <div class="sep"></div>
   <button type="button" id="prev">&larr; Back</button>
   <button type="button" id="next">Next part &rarr;</button>
@@ -191,7 +191,7 @@ body.toy .joinqr { display: none; }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=2" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=3" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -235,9 +235,9 @@ body.toy .joinqr { display: none; }
   </div>
 </main>
 
-<script src="physics.js?v=2"></script>
-<script src="questions.js?v=2"></script>
-<script src="live.js?v=2"></script>
+<script src="physics.js?v=3"></script>
+<script src="questions.js?v=3"></script>
+<script src="live.js?v=3"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -369,30 +369,39 @@ function goPart(delta) {
 $('next').onclick = () => goPart(1);
 $('prev').onclick = () => goPart(-1);
 
-/* ---- Restart ------------------------------------------------------------
+/* ---- Reset room ---------------------------------------------------------
+   Clears THIS group on the server - players, scores, open question - and puts
+   every phone back at its join screen. For starting over after a rehearsal, or
+   when something has gone wrong.
+
+   Not the same as New group, which starts the NEXT group and lets people
+   decide for themselves whether to join it. This one empties the room.
+
    Two deliberate clicks in a row on the button itself. Clicking anywhere else
    cancels, and it disarms itself after four seconds. */
 let arming = null;
 function disarm() {
   arming = null;
-  $('restart').classList.remove('arming');
-  $('restart').textContent = 'Restart';
+  $('resetroom').classList.remove('arming');
+  $('resetroom').textContent = 'Reset room';
 }
-$('restart').onclick = () => {
+$('resetroom').onclick = () => {
   if (arming) {
     clearTimeout(arming);
     disarm();
-    part = 0; asked.clear(); render();
-    Live.setPart(part);
+    /* The board is not cleared here: the server broadcasts roomReset to
+       everyone, this page included, so what is on screen is what the room
+       actually did, not what we hoped it would do. */
+    Live.resetRoom();
     return;
   }
-  $('restart').classList.add('arming');
-  $('restart').textContent = 'Are you sure?';
+  $('resetroom').classList.add('arming');
+  $('resetroom').textContent = 'Reset the room?';
   arming = setTimeout(disarm, 4000);
 };
 /* Capture phase, so it still fires if something downstream stops the event. */
 document.addEventListener('click', e => {
-  if (arming && !$('restart').contains(e.target)) { clearTimeout(arming); disarm(); }
+  if (arming && !$('resetroom').contains(e.target)) { clearTimeout(arming); disarm(); }
 }, true);
 
 /* ---- The room -----------------------------------------------------------
@@ -451,6 +460,7 @@ Live.on((type, msg) => {
       break;
     case 'close':        paintLive(); break;
     case 'joined-count': joinedCount = msg.n; paintLive(); break;
+    case 'roomReset':    joinedCount = 0; paintBoard([]); paintLive(); break;
     case 'sessionChanged':
       joinedCount = 0; part = 0; render(); paintBoard([]); paintLive();
       break;

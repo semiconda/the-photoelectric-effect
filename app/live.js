@@ -126,6 +126,9 @@ const Live = (function () {
     setPart(part)      { return send({ type: 'setPart', part: part }); },
 
     /* Presenter only: start the next group of the poster session. */
-    newSession()       { return send({ type: 'newSession' }); }
+    newSession()       { return send({ type: 'newSession' }); },
+
+    /* Presenter only: clear this group entirely and put everyone out. */
+    resetRoom()        { return send({ type: 'resetRoom' }); }
   };
 })();

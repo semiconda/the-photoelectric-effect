@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '2';
+const BUILD = '3';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="theme.css?v=3">
 <style>
 /* Phone-first. This page is opened by scanning a QR code on the projector,
    over classroom wifi, so it stays small: no images, no libraries. */
@@ -160,10 +160,10 @@ body.newgroup #newgroup { display: flex; }
   <p class="placeholder" id="doneNote"></p>
 </section>
 
-<script src="physics.js?v=2"></script>
-<script src="questions.js?v=2"></script>
-<script src="scoreboard.js?v=2"></script>
-<script src="live.js?v=2"></script>
+<script src="physics.js?v=3"></script>
+<script src="questions.js?v=3"></script>
+<script src="scoreboard.js?v=3"></script>
+<script src="live.js?v=3"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -344,6 +344,14 @@ Live.on((type, msg) => {
       /* Our token belongs to a group that has finished. Join the live one
          afresh - this is how someone who arrived early gets swept forward. */
       if (Scoreboard.me()) { Scoreboard.reset(); joinAgain(); }
+      break;
+
+    case 'roomReset':
+      /* The presenter cleared the room. Everything here goes with it, and the
+         notice is dropped if it was up - there is nothing left to join. */
+      document.body.classList.remove('newgroup');
+      Scoreboard.reset();
+      show('join');
       break;
 
     case 'sessionChanged':
