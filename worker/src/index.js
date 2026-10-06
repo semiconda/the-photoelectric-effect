@@ -65,7 +65,18 @@ export class Room {
          mis-scores late answers silently: a backgrounded phone's answer for Q5
          arriving after Q6 opened would be graded against Q6's key. */
       /* Keyed by session as well as question, so the same Q1 can be asked
-         again to the next group with its own clock. */
+         again to the next group with its own clock.
+
+         A room created before groups existed has this table with qid alone as
+         the primary key, and CREATE TABLE IF NOT EXISTS will not change it.
+         ALTER TABLE cannot change a primary key either, so the old one is
+         dropped. Nothing of value is lost: the rows only hold the answer key
+         for questions already asked. */
+      let rebuild = false;
+      try { this.sql.exec('SELECT session FROM questions LIMIT 1'); }
+      catch (e) { rebuild = true; }
+      if (rebuild) this.sql.exec('DROP TABLE IF EXISTS questions');
+
       this.sql.exec(`CREATE TABLE IF NOT EXISTS questions (
         session   INTEGER NOT NULL DEFAULT 1,
         qid       TEXT    NOT NULL,
@@ -192,6 +203,18 @@ export class Room {
   /* ---- messages --------------------------------------------------------- */
 
   async webSocketMessage(ws, raw) {
+    /* Anything that throws in here used to vanish: the presenter pressed a
+       question button, the handler failed on a storage error, and no phone
+       heard anything. Silence during a presentation is the worst failure mode
+       available, so a failure is reported back instead. */
+    try {
+      await this.handle(ws, raw);
+    } catch (err) {
+      this.send(ws, { type: 'error', message: String(err && err.message || err) });
+    }
+  }
+
+  async handle(ws, raw) {
     let msg;
     try { msg = JSON.parse(raw); } catch (e) { return; }
     const who = ws.deserializeAttachment() || {};
