@@ -116,6 +116,7 @@ body.at-done    #done { display: flex; }
 
 <script src="physics.js"></script>
 <script src="questions.js"></script>
+<script src="scoreboard.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -126,46 +127,29 @@ const $ = id => document.getElementById(id);
    This page never decides what is correct; it asks. */
 const QUIZ = QUESTIONS;
 
-/* ---- Who you are -------------------------------------------------------
-   Phase 1: the phone numbers itself from its own storage, so two phones can
-   both end up #1. That is a known limitation - only a server can hand out
-   identities that are unique across the room. See SPEC.md §4. */
-const store = {
-  get(k, fallback) {
-    try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); }
-    catch { return fallback; }
-  },
-  set(k, v) {
-    try { localStorage.setItem(k, JSON.stringify(v)); return true; }
-    catch { return false; }
-  }
-};
+/* ---- Who you are, and what you scored ----------------------------------
+   All of it lives in scoreboard.js. This page never touches storage or the
+   network itself, so when the backend arrives it plugs in behind that module
+   and nothing here changes. */
 
-let me = store.get('pe.me', null);      /* { name, n, display } */
-let at = store.get('pe.at', 0);         /* index into QUIZ */
-let score = store.get('pe.score', 0);
-let persists = true;
+function answeredCount() { return Object.keys(Scoreboard.answers()).length; }
 
 function show(where) {
-  document.body.className =
-    (me ? '' : 'anon ') + 'at-' + where;
+  document.body.className = (Scoreboard.me() ? '' : 'anon ') + 'at-' + where;
 }
 
 function paintBar() {
+  const me = Scoreboard.me();
   if (!me) return;
   $('who').textContent = me.display;
-  $('scoreLine').textContent = score + ' / ' + QUIZ.length
-    + (persists ? '' : ' · score will not survive a reload');
+  $('scoreLine').textContent = Scoreboard.score() + ' / ' + QUIZ.length
+    + (Scoreboard.persists() ? '' : ' · score will not survive a reload');
 }
 
 /* ---- Join --------------------------------------------------------------- */
 
 $('joinBtn').onclick = () => {
-  const name = $('name').value.trim() || 'Anonymous';
-  const n = store.get('pe.counter', 0) + 1;
-  persists = store.set('pe.counter', n);
-  me = { name, n, display: name + ' #' + n };
-  store.set('pe.me', me);
+  Scoreboard.join($('name').value.trim() || 'Anonymous');
   paintBar();
   show('wait');
 };
@@ -175,6 +159,7 @@ $('name').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn')
 /* ---- Questions ---------------------------------------------------------- */
 
 function askNext() {
+  const at = answeredCount();
   if (at >= QUIZ.length) { finish(); return; }
   const q = QUIZ[at];
   $('qtag').textContent = q.id + ' · question ' + (at + 1) + ' of ' + QUIZ.length;
@@ -192,17 +177,14 @@ function askNext() {
 }
 
 function answer(i, btn) {
-  const q = QUIZ[at];
+  const q = QUIZ[answeredCount()];
   const right = correctIndices(q).indexOf(i) !== -1;
 
   /* One answer per question: everything locks the moment one is tapped. */
   $('choices').querySelectorAll('.choice').forEach(b => b.disabled = true);
   btn.classList.add('picked');
 
-  if (right) score++;
-  at++;
-  store.set('pe.at', at);
-  persists = store.set('pe.score', score) && persists;
+  Scoreboard.submitAnswer(q.id, i, right);
 
   $('sentMsg').textContent = right ? 'Correct' : 'Answer sent';
   $('sentSub').textContent = right
@@ -210,12 +192,12 @@ function answer(i, btn) {
     : 'Watch the front screen for the answer.';
   paintBar();
 
-  setTimeout(() => show(at >= QUIZ.length ? 'done' : 'sent'), 450);
-  if (at >= QUIZ.length) finish();
+  const done = answeredCount() >= QUIZ.length;
+  setTimeout(() => done ? finish() : show('sent'), 450);
 }
 
 function finish() {
-  $('tally').textContent = score + ' / ' + QUIZ.length;
+  $('tally').textContent = Scoreboard.score() + ' / ' + QUIZ.length;
   show('done');
 }
 
@@ -224,14 +206,12 @@ $('sentNext').onclick = askNext;
 
 /* ---- Start -------------------------------------------------------------- */
 
-persists = store.set('pe.probe', 1);    /* does storage work at all? */
-
-if (me) {
+if (Scoreboard.me()) {
   paintBar();
   /* finish() rather than show('done'): the tally has to be filled in, which a
      bare show() does not do. Returning to a finished quiz after a reload was
      landing on an empty score. */
-  if (at >= QUIZ.length) finish(); else show('wait');
+  if (answeredCount() >= QUIZ.length) finish(); else show('wait');
 } else {
   show('join');
 }
