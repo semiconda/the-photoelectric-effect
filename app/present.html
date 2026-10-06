@@ -158,6 +158,7 @@ body.toy #endcard { display: flex; }
     <h2>Scores</h2>
     <ol class="board" id="board"></ol>
     <p class="small" id="boardNote">Hold up your phone and compare.</p>
+    <p class="small" style="color:var(--chalk-faint)">points &middot; (number correct)</p>
     <a class="btn" href="index.html">Open the simulation and play &rarr;</a>
   </div>
 </main>
@@ -356,7 +357,9 @@ function paintBoard(rows) {
     /* textContent, never innerHTML: these names were typed by the audience, and
        a name containing markup must never become markup on the projector. */
     name.textContent = r.display;
-    score.textContent = r.score;
+    score.textContent = typeof r.correct === 'number'
+      ? r.score.toLocaleString() + '  (' + r.correct + ')'
+      : r.score;
     li.appendChild(name); li.appendChild(score);
     board.appendChild(li);
   });

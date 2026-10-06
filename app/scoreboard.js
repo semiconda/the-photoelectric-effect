@@ -41,7 +41,8 @@ const Scoreboard = (function () {
   /* ---- State ------------------------------------------------------------ */
 
   let me      = get('pe.me', null);        /* { name, n, display, token } */
-  let score   = get('pe.score', 0);
+  let score   = get('pe.score', 0);        /* how many answered correctly */
+  let points  = get('pe.points', null);    /* server-scored; null when offline */
   let answers = get('pe.answers', {});     /* qid -> chosen index */
   let online  = false;                     /* true once a transport is live */
   let transport = null;                    /* set in task F */
@@ -59,6 +60,10 @@ const Scoreboard = (function () {
 
     me:       () => me,
     score:    () => score,
+
+    /* Points exist only when the room scored them. Offline there is no question
+       timer and no shared clock, so inventing a number here would be a lie. */
+    points:   () => points,
     answers:  () => Object.assign({}, answers),
     isOnline: () => online,
 
@@ -104,7 +109,8 @@ const Scoreboard = (function () {
        backend, and saying so here is more honest than returning a list of one. */
     standings() {
       if (!me) return [];
-      return [{ display: me.display, score: score, self: true }];
+      return [{ display: me.display, score: points === null ? score : points,
+                correct: score, self: true }];
     },
 
     /* Which part the presenter has opened. Null when nothing is pushing, which
@@ -113,8 +119,8 @@ const Scoreboard = (function () {
 
     /* Wipe this phone and start again. */
     reset() {
-      me = null; score = 0; answers = {};
-      ['pe.me', 'pe.score', 'pe.answers'].forEach(k => {
+      me = null; score = 0; points = null; answers = {};
+      ['pe.me', 'pe.score', 'pe.points', 'pe.answers'].forEach(k => {
         try { localStorage.removeItem(k); } catch (e) {}
       });
       emit('reset', null);
@@ -130,18 +136,23 @@ const Scoreboard = (function () {
         token: server.token
       };
       set('pe.me', me);
-      if (typeof server.score === 'number') { score = server.score; set('pe.score', score); }
+      if (typeof server.score === 'number') { points = server.score; set('pe.points', points); }
+      if (typeof server.correctCount === 'number') { score = server.correctCount; set('pe.score', score); }
       emit('joined', me);
       return me;
     },
 
     /* The server's score wins. A phone must not be able to disagree with the
        room about what it scored. */
-    syncScore(n) {
-      if (typeof n !== 'number' || n === score) return;
-      score = n;
-      set('pe.score', score);
-      emit('answered', { qid: null, choice: null, correct: null, score: score });
+    syncScore(serverPoints, correctCount) {
+      let changed = false;
+      if (typeof serverPoints === 'number' && serverPoints !== points) {
+        points = serverPoints; set('pe.points', points); changed = true;
+      }
+      if (typeof correctCount === 'number' && correctCount !== score) {
+        score = correctCount; set('pe.score', score); changed = true;
+      }
+      if (changed) emit('answered', { qid: null, choice: null, correct: null, score: score });
     },
 
     /* Record that a question was answered without scoring it again - used when

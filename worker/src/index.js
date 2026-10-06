@@ -22,6 +22,19 @@
 const MAX_NAME = 24;
 const MAX_PLAYERS = 60;
 
+/* Points for a correct answer: half guaranteed, half scaled by how quickly it
+   arrived, within this window. Being RIGHT is worth far more than being fast -
+   a careful answer at the last second still beats a quick wrong one - so speed
+   only ever separates people who were both correct. That is the whole job:
+   with three to five questions and fifteen people, plain counting ties
+   constantly, and a tie nobody can explain is worse than a game show.
+
+   The window is independent of when the presenter reveals. They can talk for a
+   minute; only the first 20 seconds affect points. */
+const POINT_WINDOW_MS = 20000;
+const POINTS_MAX = 1000;
+const POINTS_FLOOR = 500;
+
 export class Room {
   constructor(state, env) {
     this.state = state;
@@ -34,9 +47,14 @@ export class Room {
         name      TEXT    NOT NULL,
         display   TEXT    NOT NULL,
         score     INTEGER NOT NULL DEFAULT 0,
+        correct   INTEGER NOT NULL DEFAULT 0,
         token     TEXT    NOT NULL UNIQUE,
         joined_at INTEGER NOT NULL
       )`);
+      /* Rooms created before points existed keep the old shape, and
+         CREATE TABLE IF NOT EXISTS will not change it. SQLite has no
+         ADD COLUMN IF NOT EXISTS, so try and ignore the failure. */
+      try { this.sql.exec('ALTER TABLE players ADD COLUMN correct INTEGER NOT NULL DEFAULT 0'); } catch (e) {}
 
       /* The key is stored PER QUESTION, not per room. One key per room
          mis-scores late answers silently: a backgrounded phone's answer for Q5
@@ -53,9 +71,11 @@ export class Room {
         qid       TEXT    NOT NULL,
         choice    INTEGER NOT NULL,
         correct   INTEGER NOT NULL,
+        points    INTEGER NOT NULL DEFAULT 0,
         at        INTEGER NOT NULL,
         PRIMARY KEY (player_id, qid)
       )`);
+      try { this.sql.exec('ALTER TABLE answers ADD COLUMN points INTEGER NOT NULL DEFAULT 0'); } catch (e) {}
 
       this.sql.exec(`CREATE TABLE IF NOT EXISTS room (
         k TEXT PRIMARY KEY,
@@ -77,7 +97,7 @@ export class Room {
 
   standings() {
     return this.sql
-      .exec('SELECT display, score FROM players ORDER BY score DESC, joined_at ASC')
+      .exec('SELECT display, score, correct FROM players ORDER BY score DESC, joined_at ASC')
       .toArray();
   }
 
@@ -159,13 +179,13 @@ export class Room {
          score of zero, in front of the room. */
       case 'resume': {
         const rows = this.sql.exec(
-          'SELECT id, display, score FROM players WHERE token = ?', String(msg.token || '')
+          'SELECT id, display, score, correct FROM players WHERE token = ?', String(msg.token || '')
         ).toArray();
         if (!rows.length) { this.send(ws, { type: 'unknown-token' }); return; }
         ws.serializeAttachment({ role: who.role, playerId: rows[0].id });
         this.send(ws, {
           type: 'joined', id: rows[0].id, display: rows[0].display,
-          token: msg.token, score: rows[0].score, resumed: true,
+          token: msg.token, score: rows[0].score, correctCount: rows[0].correct, resumed: true,
           part: this.getState('part', null), open: this.getState('open', null)
         });
         this.pushStandings();
@@ -195,7 +215,7 @@ export class Room {
         ws.serializeAttachment({ role: who.role, playerId: id });
 
         this.send(ws, {
-          type: 'joined', id: id, display: display, token: token, score: 0,
+          type: 'joined', id: id, display: display, token: token, score: 0, correctCount: 0,
           part: this.getState('part', null), open: this.getState('open', null)
         });
         this.broadcast({ type: 'joined-count', n: count + 1 }, 'presenter');
@@ -241,7 +261,7 @@ export class Room {
       case 'answer': {
         if (!who.playerId) { this.send(ws, { type: 'not-joined' }); return; }
         const qid = String(msg.qid || '');
-        const rows = this.sql.exec('SELECT answer FROM questions WHERE qid = ?', qid).toArray();
+        const rows = this.sql.exec('SELECT answer, opened_at FROM questions WHERE qid = ?', qid).toArray();
         if (!rows.length) { this.send(ws, { type: 'not-open', qid: qid }); return; }
 
         /* Late answers are accepted on purpose. The key for THAT question is
@@ -250,24 +270,39 @@ export class Room {
         const choice = Number(msg.choice);
         const correct = key.indexOf(choice) !== -1;
 
+        /* Both timestamps are taken HERE, so no phone's clock is involved.
+           Network latency is inside the measurement, which is fair enough in
+           one room on one wifi, and is why points are never shown as times. */
+        const now = Date.now();
+        const elapsed = Math.max(0, now - rows[0].opened_at);
+        const frac = Math.min(elapsed, POINT_WINDOW_MS) / POINT_WINDOW_MS;
+        const points = correct
+          ? Math.round(POINTS_FLOOR + (POINTS_MAX - POINTS_FLOOR) * (1 - frac))
+          : 0;
+
         const cursor = this.sql.exec(
-          'INSERT OR IGNORE INTO answers (player_id, qid, choice, correct, at) VALUES (?, ?, ?, ?, ?)',
-          who.playerId, qid, choice, correct ? 1 : 0, Date.now()
+          'INSERT OR IGNORE INTO answers (player_id, qid, choice, correct, points, at) VALUES (?, ?, ?, ?, ?, ?)',
+          who.playerId, qid, choice, correct ? 1 : 0, points, now
         );
 
         /* The primary key stops a duplicate ROW, but not a second increment
            beside it. Gate the score on the insert having actually inserted,
-           or a double tap is worth two points. */
+           or a double tap is worth two scores. */
         if (cursor.rowsWritten > 0 && correct) {
-          this.sql.exec('UPDATE players SET score = score + 1 WHERE id = ?', who.playerId);
+          this.sql.exec(
+            'UPDATE players SET score = score + ?, correct = correct + 1 WHERE id = ?',
+            points, who.playerId
+          );
         }
 
-        const score = this.sql.exec(
-          'SELECT score FROM players WHERE id = ?', who.playerId
-        ).one().score;
+        const me = this.sql.exec(
+          'SELECT score, correct FROM players WHERE id = ?', who.playerId
+        ).one();
 
         this.send(ws, {
-          type: 'answered', qid: qid, correct: correct, score: score,
+          type: 'answered', qid: qid, correct: correct,
+          score: me.score, correctCount: me.correct,
+          points: cursor.rowsWritten > 0 ? points : 0,
           already: cursor.rowsWritten === 0
         });
         this.pushStandings();

@@ -108,6 +108,7 @@ body.at-done    #done { display: flex; }
 <section class="screen" id="done">
   <div class="big">That's the lot</div>
   <div class="tally" id="tally"></div>
+  <div class="note" id="tallySub"></div>
   <p class="note">Hold up your phone so everyone can see.</p>
   <p class="placeholder" id="doneNote"></p>
 </section>
@@ -158,9 +159,12 @@ function show(where) {
 function paintBar() {
   const me = Scoreboard.me();
   if (!me) return;
+  const pts = Scoreboard.points();
   $('who').textContent = me.display;
-  $('scoreLine').textContent = Scoreboard.score() + ' / ' + QUIZ.length
-    + (Scoreboard.persists() ? '' : ' · score will not survive a reload');
+  $('scoreLine').textContent =
+    (pts === null ? Scoreboard.score() + ' / ' + QUIZ.length
+                  : pts.toLocaleString() + ' pts · ' + Scoreboard.score() + ' right')
+    + (Scoreboard.persists() ? '' : ' · will not survive a reload');
 }
 
 /* ---- Join --------------------------------------------------------------- */
@@ -231,7 +235,13 @@ function answer(i, btn) {
 }
 
 function finish() {
-  $('tally').textContent = Scoreboard.score() + ' / ' + QUIZ.length;
+  const pts = Scoreboard.points();
+  /* Points are the ranking; the number right is what people actually want to
+     know about themselves. Show both, points first. */
+  $('tally').textContent = pts === null ? Scoreboard.score() + ' / ' + QUIZ.length
+                                        : pts.toLocaleString();
+  $('tallySub').textContent = pts === null ? ''
+    : Scoreboard.score() + ' of ' + QUIZ.length + ' correct';
   show('done');
 }
 
@@ -281,7 +291,7 @@ Live.on((type, msg) => {
 
     case 'answered':
       /* The server scored it. Its number wins over ours. */
-      Scoreboard.syncScore(msg.score);
+      Scoreboard.syncScore(msg.score, msg.correctCount);
       paintBar();
       break;
 
