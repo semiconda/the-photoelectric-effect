@@ -79,9 +79,10 @@ body.newgroup #newgroup { display: flex; }
 <!-- 0. A new group has started ---------------------------------------- -->
 <div id="newgroup">
   <div class="big">A new group has started</div>
-  <p class="note">You have been moved across and your score is back to zero.
-  Keep this page open and watch the screen at the front.</p>
-  <button type="button" class="primary" id="newgroupOk">Got it</button>
+  <p class="note">Join in and your score starts again at zero — or stop here
+  and let the new arrivals play.</p>
+  <button type="button" class="primary" id="newgroupJoin">Join this group</button>
+  <button type="button" id="newgroupNo">I have already played</button>
 </div>
 
 <!-- 1. Join ------------------------------------------------------------- -->
@@ -270,7 +271,19 @@ function finish() {
   show('done');
 }
 
-$('newgroupOk').onclick = () => document.body.classList.remove('newgroup');
+$('newgroupJoin').onclick = () => {
+  document.body.classList.remove('newgroup');
+  Scoreboard.reset();
+  joinAgain();
+};
+
+/* Bowing out: keep their final score on screen rather than zeroing it. They
+   stay connected and simply never join the new group. */
+$('newgroupNo').onclick = () => {
+  document.body.classList.remove('newgroup');
+  $('doneNote').textContent = 'A new group is playing now. Thanks for joining in.';
+  finish();
+};
 
 $('waitNext').onclick = askNext;
 $('sentNext').onclick = askNext;
@@ -309,11 +322,13 @@ Live.on((type, msg) => {
       break;
 
     case 'sessionChanged':
-      /* The presenter moved on to the next group. Everyone here comes too,
-         with a clean score, rather than being stranded on the old board - but
-         they are TOLD, because a score silently becoming zero is alarming. */
-      Scoreboard.reset();
-      joinAgain();
+      /* The presenter moved on. Nobody is carried across automatically: whoever
+         is standing there decides. Someone who already played can bow out,
+         which is the only honest answer to them having seen the questions
+         already - a soft block would just annoy the people it caught.
+
+         Nothing is reset until they choose, so their score is still on screen
+         behind the notice. */
       document.body.classList.add('newgroup');
       break;
 
@@ -353,9 +368,9 @@ function joinAgain() {
 function openFromServer(qid) {
   const q = QUIZ.find(x => x.id === qid);
   if (!q) return;
-  /* A question arriving beats the notice: nobody should be reading "a new
-     group has started" while the first question of it is on screen. */
-  document.body.classList.remove('newgroup');
+  /* Someone who has not answered the notice is not in this group, so a question
+     opening must not drag them into it. */
+  if (document.body.classList.contains('newgroup')) return;
   if (Scoreboard.hasAnswered(q.id)) { show('sent'); return; }
   ask(q);
 }

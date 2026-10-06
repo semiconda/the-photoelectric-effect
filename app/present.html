@@ -388,6 +388,33 @@ function paintLive() {
     : joinedCount + (joinedCount === 1 ? ' person has joined' : ' people have joined');
 }
 
+/* Deleted by accident in an earlier edit, which meant every standings message
+   threw and the leaderboard was never drawn at all. */
+function paintBoard(rows) {
+  const board = $('board');
+  board.innerHTML = '';
+  if (!rows || !rows.length) {
+    $('boardNote').textContent = Live.isOpen()
+      ? 'Nobody has scored yet.'
+      : 'Not connected to the room — hold up your phone and compare.';
+    return;
+  }
+  $('boardNote').textContent = '';
+  rows.forEach(r => {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    const score = document.createElement('span');
+    /* textContent, never innerHTML: these names were typed by the audience, and
+       a name containing markup must never become markup on the projector. */
+    name.textContent = r.display;
+    score.textContent = typeof r.correct === 'number'
+      ? r.score.toLocaleString() + '  (' + r.correct + ')'
+      : r.score;
+    li.appendChild(name); li.appendChild(score);
+    board.appendChild(li);
+  });
+}
+
 Live.on((type, msg) => {
   switch (type) {
     case 'open':
