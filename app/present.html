@@ -4,7 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Photoelectric Effect — presentation</title>
-<link rel="stylesheet" href="theme.css">
+<script>
+/* ---- Freshness -----------------------------------------------------------
+   GitHub Pages tells browsers to keep this page for ten minutes, and phones
+   hold on far longer. A stale page running against a current server is a real
+   risk on the day, not just an annoyance while building.
+
+   So: ask an UNCACHED file what the current build is, and if this page is
+   older, reload once with the new build in the URL - which the browser treats
+   as a different address and therefore fetches fresh.
+
+   Guarded against looping: if the URL already names that build, stop. Offline,
+   the check fails silently and the page carries on with what it has. */
+const BUILD = '2';
+fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+  .then(r => r.json())
+  .then(v => {
+    const latest = String(v.build);
+    if (latest === BUILD) return;
+    const u = new URL(location.href);
+    if (u.searchParams.get('b') === latest) return;
+    u.searchParams.set('b', latest);
+    location.replace(u.toString());
+  })
+  .catch(() => {});
+</script>
+<link rel="stylesheet" href="theme.css?v=2">
 <style>
 html, body { height: 100%; }
 
@@ -166,7 +191,7 @@ body.toy .joinqr { display: none; }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=2" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -210,9 +235,9 @@ body.toy .joinqr { display: none; }
   </div>
 </main>
 
-<script src="physics.js"></script>
-<script src="questions.js"></script>
-<script src="live.js"></script>
+<script src="physics.js?v=2"></script>
+<script src="questions.js?v=2"></script>
+<script src="live.js?v=2"></script>
 <script>
 const $ = id => document.getElementById(id);
 

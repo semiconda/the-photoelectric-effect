@@ -4,7 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Photoelectric Effect — quiz</title>
-<link rel="stylesheet" href="theme.css">
+<script>
+/* ---- Freshness -----------------------------------------------------------
+   GitHub Pages tells browsers to keep this page for ten minutes, and phones
+   hold on far longer. A stale page running against a current server is a real
+   risk on the day, not just an annoyance while building.
+
+   So: ask an UNCACHED file what the current build is, and if this page is
+   older, reload once with the new build in the URL - which the browser treats
+   as a different address and therefore fetches fresh.
+
+   Guarded against looping: if the URL already names that build, stop. Offline,
+   the check fails silently and the page carries on with what it has. */
+const BUILD = '2';
+fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+  .then(r => r.json())
+  .then(v => {
+    const latest = String(v.build);
+    if (latest === BUILD) return;
+    const u = new URL(location.href);
+    if (u.searchParams.get('b') === latest) return;
+    u.searchParams.set('b', latest);
+    location.replace(u.toString());
+  })
+  .catch(() => {});
+</script>
+<link rel="stylesheet" href="theme.css?v=2">
 <style>
 /* Phone-first. This page is opened by scanning a QR code on the projector,
    over classroom wifi, so it stays small: no images, no libraries. */
@@ -135,10 +160,10 @@ body.newgroup #newgroup { display: flex; }
   <p class="placeholder" id="doneNote"></p>
 </section>
 
-<script src="physics.js"></script>
-<script src="questions.js"></script>
-<script src="scoreboard.js"></script>
-<script src="live.js"></script>
+<script src="physics.js?v=2"></script>
+<script src="questions.js?v=2"></script>
+<script src="scoreboard.js?v=2"></script>
+<script src="live.js?v=2"></script>
 <script>
 const $ = id => document.getElementById(id);
 
