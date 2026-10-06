@@ -1,6 +1,8 @@
 /* The Photoelectric Effect — the quiz questions.
  *
- * Six questions, from SPEC.md §4. Loaded by present.html and quiz.html.
+ * Three questions. The talk runs three times in ten minutes, poster-session
+ * style, so there is room for about 80 seconds of actual teaching and three
+ * questions at roughly 40 seconds each. Loaded by present.html and quiz.html.
  * Classic script, like physics.js — see the note there.
  *
  * THE RULE THIS FILE EXISTS TO ENFORCE:
@@ -37,33 +39,19 @@ const QUESTIONS = [
       'The electrons come out faster',
       'Nothing comes out at all'
     ],
-    /* Derived from emits, not asserted: 700 nm carries 1.77 eV, sodium needs
-       2.30 eV, so no brightness can help. */
+    /* The hook, and the teacher's "whether electrons are emitted". The
+       intuitive answer is wrong: 700 nm carries 1.77 eV, sodium needs 2.30 eV,
+       so no amount of brightness helps. Derived from emits, not asserted. */
     compute: () => physics(700, 100, phiOf('Sodium')).emits
       ? 'More electrons come out'
       : 'Nothing comes out at all'
   },
   {
-    id: 'Q2', part: 3,
-    text: 'Which photon carries more energy — violet light at 400 nm, or red light at 700 nm?',
-    options: [
-      'The 400 nm violet photon',
-      'The 700 nm red photon',
-      'They carry the same energy'
-    ],
-    compute: () => {
-      const violet = physics(400, 50, phiOf('Sodium')).energy;
-      const red    = physics(700, 50, phiOf('Sodium')).energy;
-      if (violet === red) return 'They carry the same energy';
-      return violet > red ? 'The 400 nm violet photon' : 'The 700 nm red photon';
-    }
-  },
-  {
-    id: 'Q3', part: 4,
+    id: 'Q2', part: 4,
     text: 'Cesium needs 2.14 eV to release an electron; copper needs 4.70 eV. Which one needs shorter-wavelength light?',
     options: ['Cesium', 'Copper', 'They need the same wavelength'],
-    /* A higher work function means a SHORTER threshold wavelength. Compared,
-       not assumed. */
+    /* The work function as the second input the teacher names. A higher work
+       function means a SHORTER threshold wavelength — compared, not assumed. */
     compute: () => {
       const cs = physics(400, 50, phiOf('Cesium')).threshold;
       const cu = physics(400, 50, phiOf('Copper')).threshold;
@@ -72,24 +60,13 @@ const QUESTIONS = [
     }
   },
   {
-    id: 'Q4', part: 5,
-    text: 'Zinc needs 4.30 eV. What is the longest wavelength of light that still releases an electron?',
-    options: ['288.3 nm', '180.0 nm', '539.1 nm', '4.30 nm'],
-    compute: () => fmtNm(physics(400, 50, phiOf('Zinc')).threshold)
-  },
-  {
-    id: 'Q5', part: 6,
-    text: 'Sodium needs 2.30 eV to release an electron, and each photon of this light delivers 3.10 eV. What is the maximum kinetic energy of the electron?',
-    options: ['0.80 eV', '3.10 eV', '2.30 eV', '5.40 eV'],
-    compute: () => fmtEv(physics(400, 50, phiOf('Sodium')).k)
-  },
-  {
-    id: 'Q6', part: 6,
-    text: 'Same light, same metal — but now we make the light twice as bright. What is the maximum kinetic energy now?',
+    id: 'Q3', part: 6,
+    text: 'Sodium under 400 nm light: each electron escapes with 0.80 eV. Now we make the light twice as bright. What is the maximum kinetic energy now?',
     options: ['1.60 eV', '0.80 eV', '0.40 eV', 'No electrons come out'],
-    /* The point of the whole experiment: doubling the intensity doubles how
-       MANY electrons escape and changes their energy not at all. Computed at
-       100% against Q5's 50% so the two really are the same light twice over. */
+    /* The point of the entire experiment: brightness changes HOW MANY electrons
+       escape and changes their energy not at all. Worded to stand alone, since
+       the question that set up 0.80 eV was cut to fit three minutes.
+       Computed at 100% intensity — the same light, twice over. */
     compute: () => fmtEv(physics(400, 100, phiOf('Sodium')).k)
   }
 ];
