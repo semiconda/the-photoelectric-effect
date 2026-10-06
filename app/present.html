@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '3';
+const BUILD = '4';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=3">
+<link rel="stylesheet" href="theme.css?v=4">
 <style>
 html, body { height: 100%; }
 
@@ -87,6 +87,29 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 #animation  { flex: 1 1 auto; min-height: 0; }
 #explanation { flex: none; min-height: 110px; }
 
+/* ---- A slot with real content in it -------------------------------------
+   The dashed box was a promise that something would go here. Once it has,
+   the border goes solid and the text left-aligns, because a paragraph read
+   from the back of a room should not be centred. */
+.slot.filled { border-style: solid; align-items: flex-start; text-align: left;
+               gap: 10px; }
+#explanation.filled { flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+.lead { font-family: var(--hand); font-size: clamp(20px, 2.3vw, 32px); color: var(--chalk); }
+.bullets { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 5px; }
+.bullets li { font-size: clamp(14px, 1.5vw, 20px); color: var(--chalk-dim); }
+.grouphead { font-family: var(--hand); font-size: clamp(16px, 1.7vw, 22px); color: var(--accent); }
+.formula { font-family: var(--hand); font-size: clamp(22px, 2.8vw, 38px);
+           color: var(--accent); align-self: center; }
+.example { display: flex; flex-direction: column; gap: 3px; }
+.example .cap { font-size: 13px; color: var(--chalk-faint); }
+.example .row { font-size: clamp(14px, 1.5vw, 19px); color: var(--chalk-dim); }
+.closing { font-family: var(--hand); font-size: clamp(16px, 1.8vw, 24px); color: var(--chalk); }
+
+/* The feedback for a question, on screen only once it has been revealed. */
+.why { font-size: clamp(15px, 1.6vw, 21px); color: var(--chalk-dim);
+       max-width: 62ch; margin-top: 14px; }
+
 /* ---- The open question --------------------------------------------------
    A question TAKES OVER the stage rather than sitting under the animation.
    Nothing else from the part is on screen while it is up, so neither the
@@ -126,6 +149,14 @@ body.asking .parts > .slot:not(#question) { display: none; }
 #endcard { display: none; flex-direction: column; align-items: center; justify-content: center;
            gap: 18px; flex: 1 1 auto; text-align: center; }
 #endcard a.btn { font-size: 22px; padding: 16px 30px; text-decoration: none; }
+
+/* Slide 5, sitting between the scores and the door to the simulation. */
+.handover { max-width: 70ch; text-align: left; display: flex; flex-direction: column;
+            gap: 8px; }
+.handover .lead { font-size: clamp(18px, 2vw, 26px); }
+.handover .bullets li { font-size: clamp(14px, 1.4vw, 18px); }
+.handover .closing { font-size: clamp(15px, 1.6vw, 21px); margin: 4px 0 0; }
+.handover em { font-style: normal; color: var(--accent); }
 body.toy .parts { display: none; }
 body.toy #endcard { display: flex; }
 
@@ -191,7 +222,7 @@ body.toy .joinqr { display: none; }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=3" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=4" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -218,12 +249,12 @@ body.toy .joinqr { display: none; }
       <div class="what" id="qwhat"></div>
       <div class="note">The audience answers on their phones.</div>
       <div class="choices" id="choices"></div>
+      <div class="why" id="qwhy" hidden></div>
     </div>
 
-    <div class="slot" id="explanation">
-      <div class="what">Explanation</div>
-      <div class="note" id="explanationNote"></div>
-    </div>
+    <!-- Painted from PARTS by paintExplanation(); empty for a part that has
+         no written content yet. -->
+    <div class="slot" id="explanation"></div>
   </div>
 
   <div id="endcard">
@@ -231,35 +262,114 @@ body.toy .joinqr { display: none; }
     <ol class="board" id="board"></ol>
     <p class="small" id="boardNote">Hold up your phone and compare.</p>
     <p class="small" style="color:var(--chalk-faint)">points &middot; (number correct)</p>
+
+    <!-- Slide 5. It lives here rather than in the slot above, because the
+         slots are hidden on this part to make room for the scores. -->
+    <div class="handover">
+      <div class="lead">Take control of the experiment.</div>
+      <ul class="bullets">
+        <li><strong>Wavelength</strong> — change the energy per photon.</li>
+        <li><strong>Intensity</strong> — change the number of photons arriving per second,
+            at a fixed wavelength.</li>
+        <li><strong>Material</strong> — change the work function.</li>
+      </ul>
+      <p class="small">Do electrons escape? How many? How does their maximum kinetic
+      energy change?</p>
+      <p class="closing">Photon energy and work function decide <em>whether</em> electrons
+      escape. Extra photon energy decides <em>how fast</em>.</p>
+    </div>
+
     <a class="btn" href="index.html">Open the simulation and play &rarr;</a>
   </div>
 </main>
 
-<script src="physics.js?v=3"></script>
-<script src="questions.js?v=3"></script>
-<script src="live.js?v=3"></script>
+<script src="physics.js?v=4"></script>
+<script src="questions.js?v=4"></script>
+<script src="live.js?v=4"></script>
 <script>
 const $ = id => document.getElementById(id);
 
 /* ---- The structure -----------------------------------------------------
-   Ten parts. The animations and explanations are still to be written, so those
-   slots are empty labelled boxes.
+   Five slides, plus the join screen in front and the toy at the end. Seven
+   minutes of material would not survive a three-minute slot, so the talk is
+   the five slides and nothing else.
 
-   The QUESTIONS are NOT defined here. They come from questions.js, which is the
-   single source: it holds the text, the options, and an answer DERIVED from
-   physics() rather than typed. Defining them here as well is how a presenter
-   screen and a phone end up showing different questions. */
+   The slide TEXT lives here because it is what the projector shows. The
+   QUESTIONS do not: they come from questions.js, which is the single source
+   holding the text, the options, and an answer DERIVED from physics() rather
+   than typed. Defining them here as well is how a presenter screen and a phone
+   end up showing different questions.
+
+   A part may carry: lead (the one line that answers the title), groups of
+   bullets, a formula, a worked example, and a closing line. Everything is
+   optional - a part with none of it draws as an empty slot. */
 const PARTS = [
   { title: 'Join' },
-  { title: 'Intro' },
-  { title: 'The puzzle' },
-  { title: 'Light in packets' },
-  { title: 'The work function' },
-  { title: 'The threshold' },
-  { title: 'Leftover energy' },
-  { title: 'The straight line' },
-  { title: 'Why it matters' },
-  { title: 'Scores, then play' }
+
+  {
+    title: 'What is light?',
+    lead: 'Light behaves like a wave and transfers energy in packets called photons.',
+    groups: [{ items: [
+      'Each photon carries energy.',
+      'Higher frequency means more energy per photon.',
+      'Shorter wavelength means more energy per photon.'
+    ] }],
+    formula: 'E = hf = hc/λ',
+    closing: 'Different colours. Different photon energies.'
+  },
+
+  {
+    title: 'Can light knock electrons out of metal?',
+    lead: 'Yes — but each photon needs enough energy.',
+    groups: [{ items: [
+      'Electrons need energy to escape from a metal.',
+      'The minimum required energy is called the work function (φ).',
+      'When a photon provides more than this energy, an electron can escape.',
+      'The remaining energy determines its maximum kinetic energy.'
+    ] }],
+    formula: 'Kₘₐₓ = hf − φ',
+    closing: 'Photon energy = work function + maximum electron kinetic energy'
+  },
+
+  {
+    title: 'Change the colour. Change the result.',
+    lead: 'Shorter wavelength → higher photon energy.',
+    groups: [{ items: [
+      'Below the threshold: no electrons escape.',
+      'Above the threshold: electrons escape.',
+      'Higher photon energy above the threshold: higher maximum electron speed.'
+    ] }],
+    example: { cap: 'Example: sodium', rows: [
+      '700 nm — red light: no emission.',
+      '400 nm — violet light: electrons escape.',
+      '300 nm — ultraviolet light: higher maximum electron kinetic energy.'
+    ] }
+  },
+
+  {
+    title: 'More light? A different metal?',
+    groups: [
+      { head: 'Change the intensity:', items: [
+        'At a fixed wavelength, brighter light delivers more photons per second.',
+        'Above the threshold, more electrons escape.',
+        'Their maximum kinetic energy stays the same.',
+        'Below the threshold, increasing intensity does not cause emission in the single-photon model.'
+      ] },
+      { head: 'Change the material:', items: [
+        'Different metals have different work functions.',
+        'A lower work function makes electron emission easier.',
+        'The same light may work on one metal but not another.'
+      ] }
+    ],
+    example: { cap: 'Same light at 400 nm', rows: [
+      'Sodium → emission',
+      'Copper → no emission'
+    ] }
+  },
+
+  /* Slide 5's text is in the end card, not here: the slots are hidden on this
+     part so the scores can have the screen. */
+  { title: 'Take control of the experiment' }
 ];
 
 /* Each part asks questions.js what it carries, rather than being told. */
@@ -318,6 +428,9 @@ function toggleQuestion(i) {
 }
 
 function showQuestion(q) {
+  /* Hidden until the reveal: the explanation IS the answer. */
+  $('qwhy').hidden = true;
+  $('qwhy').textContent = q.why || '';
   $('qtag').textContent = q.id;
   $('qwhat').textContent = q.text;
   $('choices').innerHTML = q.options
@@ -331,9 +444,51 @@ function showQuestion(q) {
 function markCorrect(q) {
   const els = $('choices').querySelectorAll('.choice');
   correctIndices(q).forEach(i => { if (els[i]) els[i].classList.add('correct'); });
+  if (q.why) $('qwhy').hidden = false;
 }
 
 /* ---- The stage ---------------------------------------------------------- */
+
+/* One element, built from text. textContent throughout and never innerHTML:
+   slide text is data, and a stray < would otherwise become markup on the
+   projector. */
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+/* Draw whatever this part has written for it. A part with nothing written
+   stays an empty slot rather than pretending to be finished. */
+function paintExplanation(p) {
+  const box = $('explanation');
+  while (box.firstChild) box.removeChild(box.firstChild);
+
+  const filled = !!(p.lead || p.groups || p.formula || p.example || p.closing);
+  box.classList.toggle('filled', filled);
+  if (!filled) return;
+
+  if (p.lead) box.appendChild(el('div', 'lead', p.lead));
+
+  (p.groups || []).forEach(g => {
+    if (g.head) box.appendChild(el('div', 'grouphead', g.head));
+    const ul = el('ul', 'bullets');
+    g.items.forEach(t => ul.appendChild(el('li', null, t)));
+    box.appendChild(ul);
+  });
+
+  if (p.formula) box.appendChild(el('div', 'formula', p.formula));
+
+  if (p.example) {
+    const wrap = el('div', 'example');
+    wrap.appendChild(el('div', 'cap', p.example.cap));
+    p.example.rows.forEach(t => wrap.appendChild(el('div', 'row', t)));
+    box.appendChild(wrap);
+  }
+
+  if (p.closing) box.appendChild(el('div', 'closing', p.closing));
+}
 
 function render() {
   const p = PARTS[part];
@@ -341,8 +496,8 @@ function render() {
   $('title').textContent  = p.title;
   $('where').textContent  = 'part ' + part + ' of ' + (PARTS.length - 1);
 
-  $('animationNote').textContent   = 'Part ' + part + ' — ' + p.title + '. To be built.';
-  $('explanationNote').textContent = 'What the presenter says, and whatever text supports it. To be written.';
+  $('animationNote').textContent = 'Part ' + part + ' — ' + p.title + '. To be built.';
+  paintExplanation(p);
 
   document.body.classList.toggle('toy', part === PARTS.length - 1);
   document.body.classList.toggle('joining', part === 0);

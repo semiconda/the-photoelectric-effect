@@ -1,9 +1,9 @@
 /* The Photoelectric Effect — the quiz questions.
  *
- * Three questions. The talk runs three times in ten minutes, poster-session
- * style, so there is room for about 80 seconds of actual teaching and three
- * questions at roughly 40 seconds each. Loaded by present.html and quiz.html.
- * Classic script, like physics.js — see the note there.
+ * Five questions across four slides. The talk runs three times in ten minutes,
+ * poster-session style, so each one has about twenty seconds. Loaded by
+ * present.html and quiz.html. Classic script, like physics.js — see the note
+ * there.
  *
  * THE RULE THIS FILE EXISTS TO ENFORCE:
  *
@@ -17,6 +17,10 @@
  * rather than marked. That is deliberate: if physics.js ever changes so that
  * the computed answer stops matching any option, answerIndex() reports it
  * loudly instead of quietly picking the nearest one.
+ *
+ * A compute() that returns null is saying "the premise this question rests on
+ * no longer holds". That matches no option either, so it fails the same loud
+ * way rather than guessing.
  */
 
 /* Work functions come from MATERIALS in physics.js, never retyped here, so a
@@ -27,47 +31,96 @@ function phiOf(name) {
   return m.phi;
 }
 
-const fmtEv = v => v.toFixed(2) + ' eV';
-const fmtNm = v => v.toFixed(1) + ' nm';
-
 const QUESTIONS = [
   {
-    id: 'Q1', part: 2,
-    text: 'Sodium, red light at 700 nm. We turn the brightness all the way up. What happens?',
-    options: [
-      'More electrons come out',
-      'The electrons come out faster',
-      'Nothing comes out at all'
-    ],
-    /* The hook, and the teacher's "whether electrons are emitted". The
-       intuitive answer is wrong: 700 nm carries 1.77 eV, sodium needs 2.30 eV,
-       so no amount of brightness helps. Derived from emits, not asserted. */
-    compute: () => physics(700, 100, phiOf('Sodium')).emits
-      ? 'More electrons come out'
-      : 'Nothing comes out at all'
-  },
-  {
-    id: 'Q2', part: 4,
-    text: 'Cesium needs 2.14 eV to release an electron; copper needs 4.70 eV. Which one needs shorter-wavelength light?',
-    options: ['Cesium', 'Copper', 'They need the same wavelength'],
-    /* The work function as the second input the teacher names. A higher work
-       function means a SHORTER threshold wavelength — compared, not assumed. */
+    id: 'Q1', part: 1,
+    text: 'Which photon has more energy?',
+    options: ['A red photon', 'A violet photon'],
+    /* Slide 1, straight after E = hc/λ: shorter wavelength, more energy per
+       photon. Compared at 700 nm against 400 nm rather than asserted. The
+       material is irrelevant here — photon energy does not depend on it. */
     compute: () => {
-      const cs = physics(400, 50, phiOf('Cesium')).threshold;
-      const cu = physics(400, 50, phiOf('Copper')).threshold;
-      if (cs === cu) return 'They need the same wavelength';
-      return cu < cs ? 'Copper' : 'Cesium';
-    }
+      const red    = physics(700, 50, phiOf('Sodium')).energy;
+      const violet = physics(400, 50, phiOf('Sodium')).energy;
+      if (violet === red) return null;
+      return violet > red ? 'A violet photon' : 'A red photon';
+    },
+    why: 'Violet light has a higher frequency, so each photon carries more energy.'
   },
   {
-    id: 'Q3', part: 6,
-    text: 'Sodium under 400 nm light: each electron escapes with 0.80 eV. Now we make the light twice as bright. What is the maximum kinetic energy now?',
-    options: ['1.60 eV', '0.80 eV', '0.40 eV', 'No electrons come out'],
-    /* The point of the entire experiment: brightness changes HOW MANY electrons
-       escape and changes their energy not at all. Worded to stand alone, since
-       the question that set up 0.80 eV was cut to fit three minutes.
-       Computed at 100% intensity — the same light, twice over. */
-    compute: () => fmtEv(physics(400, 100, phiOf('Sodium')).k)
+    id: 'Q2', part: 2,
+    text: 'A photon has less energy than the metal’s work function. '
+        + 'Can it release an electron?',
+    options: ['Yes — the electron escapes.', 'No — the electron stays.'],
+    /* Slide 2, the work function as a threshold. The concrete case behind the
+       wording is 700 nm on sodium: 1.77 eV against 2.30 eV. The answer is
+       whatever emits says about that case, not what the wording implies. */
+    compute: () => {
+      const r = physics(700, 100, phiOf('Sodium'));
+      if (r.energy >= r.phi) return null;   /* premise gone: no longer "less than φ" */
+      return r.emits ? 'Yes — the electron escapes.' : 'No — the electron stays.';
+    },
+    why: 'The photon does not provide enough energy to overcome the work function.'
+  },
+  {
+    id: 'Q3', part: 3,
+    text: '700 nm red light does not release electrons from sodium. '
+        + 'Which change will help?',
+    options: ['Make the same red light brighter.', 'Switch to 400 nm violet light.'],
+    /* The hook. The intuitive answer is the wrong one: brightness sends more
+       photons, and no number of photons that are individually too weak adds up
+       to one that is strong enough. Both branches are evaluated — the question
+       is only valid while exactly one of them emits. */
+    compute: () => {
+      const phi      = phiOf('Sodium');
+      const brighter = physics(700, 100, phi).emits;
+      const violet   = physics(400, 50, phi).emits;
+      if (brighter === violet) return null;   /* both work, or neither: no answer */
+      return violet ? 'Switch to 400 nm violet light.' : 'Make the same red light brighter.';
+    },
+    why: 'Each 400 nm photon now has enough energy to release an electron from sodium. '
+       + 'Adding more red photons does not overcome the energy barrier in this model.'
+  },
+  {
+    id: 'Q4', part: 3,
+    text: 'Electrons are already escaping. We shorten the wavelength while '
+        + 'keeping the same metal. What happens to their maximum speed?',
+    options: ['It increases.', 'It stays the same.'],
+    /* Kmax = hf − φ, the teacher's "what kinetic energy they acquire". 400 nm
+       against 300 nm on sodium, both above threshold, k compared. */
+    compute: () => {
+      const phi     = phiOf('Sodium');
+      const longer  = physics(400, 50, phi);
+      const shorter = physics(300, 50, phi);
+      if (!longer.emits || !shorter.emits) return null;  /* premise: already escaping */
+      if (shorter.k > longer.k) return 'It increases.';
+      if (shorter.k === longer.k) return 'It stays the same.';
+      return null;
+    },
+    why: 'Shorter wavelengths provide more energy per photon, leaving more energy '
+       + 'for the emitted electron’s motion.'
+  },
+  {
+    id: 'Q5', part: 4,
+    text: 'Sodium is emitting electrons. We keep the wavelength fixed and '
+        + 'increase the light intensity. What changes?',
+    options: ['More electrons escape per second.', 'The maximum electron speed increases.'],
+    /* The pair of ideas the whole talk turns on, side by side: intensity moves
+       the RATE, wavelength moves the ENERGY. Both are read off physics() at
+       400 nm, dim against bright — rate compared, k compared. */
+    compute: () => {
+      const phi    = phiOf('Sodium');
+      const dim    = physics(400, 50, phi);
+      const bright = physics(400, 100, phi);
+      if (!dim.emits || !bright.emits) return null;      /* premise: already emitting */
+      const moreElectrons = bright.rate > dim.rate;
+      const sameEnergy    = bright.k === dim.k;
+      if (moreElectrons && sameEnergy) return 'More electrons escape per second.';
+      if (!moreElectrons && !sameEnergy) return 'The maximum electron speed increases.';
+      return null;
+    },
+    why: 'More photons arrive, but their individual energies are unchanged, so the '
+       + 'maximum electron kinetic energy stays the same.'
   }
 ];
 
