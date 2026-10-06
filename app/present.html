@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '5';
+const BUILD = '6';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=5">
+<link rel="stylesheet" href="theme.css?v=6">
 <style>
 html, body { height: 100%; }
 
@@ -84,7 +84,9 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .slot .what { font-family: var(--hand); font-size: 22px; color: var(--chalk-dim); }
 .slot .note { font-size: 13px; color: var(--chalk-faint); max-width: 46ch; }
 
-#animation  { flex: 1 1 auto; min-height: 0; }
+/* The picture takes twice the room the words do. On a projector, height is
+   what runs out, and the drawing is the part that cannot be read aloud. */
+#animation  { flex: 2 1 0; min-height: 0; }
 #explanation { flex: none; min-height: 110px; }
 
 /* ---- A slot with real content in it -------------------------------------
@@ -92,23 +94,91 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
    the border goes solid and the text left-aligns, because a paragraph read
    from the back of a room should not be centred. */
 .slot.filled { border-style: solid; align-items: flex-start; text-align: left;
-               gap: 10px; }
-#explanation.filled { flex: 1 1 auto; min-height: 0; overflow: auto; }
+               gap: 7px; padding: 14px 20px; }
+/* basis 0, not auto: with auto each box keeps its own content height first and
+   the 2:1 split never happens. */
+#explanation.filled { flex: 1 1 0; min-height: 0; overflow: hidden; }
 
-.lead { font-family: var(--hand); font-size: clamp(20px, 2.3vw, 32px); color: var(--chalk); }
-.bullets { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 5px; }
-.bullets li { font-size: clamp(14px, 1.5vw, 20px); color: var(--chalk-dim); }
-.grouphead { font-family: var(--hand); font-size: clamp(16px, 1.7vw, 22px); color: var(--accent); }
-.formula { font-family: var(--hand); font-size: clamp(22px, 2.8vw, 38px);
+/* Everything in this box is sized in em against the box itself, so one number
+   scales the whole slide. fitExplanation() turns that number down until the
+   text fits - which means content can be rewritten freely without anyone
+   having to think about whether it still fits on a projector. */
+#explanation.filled { font-size: calc(clamp(12px, 1.3vw, 18px) * var(--fit, 1)); }
+
+.lead { font-family: var(--hand); font-size: 1.55em; color: var(--chalk); }
+.bullets { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: .2em; }
+.bullets li { font-size: 1em; color: var(--chalk-dim); }
+.grouphead { font-family: var(--hand); font-size: 1.25em; color: var(--accent); }
+.groupcols { display: flex; gap: 2.2em; width: 100%; }
+.groupcol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: .25em; }
+.formula { font-family: var(--hand); font-size: 1.9em;
            color: var(--accent); align-self: center; }
-.example { display: flex; flex-direction: column; gap: 3px; }
-.example .cap { font-size: 13px; color: var(--chalk-faint); }
-.example .row { font-size: clamp(14px, 1.5vw, 19px); color: var(--chalk-dim); }
-.closing { font-family: var(--hand); font-size: clamp(16px, 1.8vw, 24px); color: var(--chalk); }
+.example { display: flex; flex-direction: column; gap: .2em; }
+.example .cap { font-size: .8em; color: var(--chalk-faint); }
+.example .row { font-size: 1em; color: var(--chalk-dim); }
+.closing { font-family: var(--hand); font-size: 1.2em; color: var(--chalk); }
 
 /* The feedback for a question, on screen only once it has been revealed. */
 .why { font-size: clamp(15px, 1.6vw, 21px); color: var(--chalk-dim);
        max-width: 62ch; margin-top: 14px; }
+
+/* ---- The comparison cards -----------------------------------------------
+   The idiom from index.html's "What changes?": hold everything constant,
+   change ONE thing, put the results side by side. Nothing decorative.
+
+   The electrons are a single CSS keyframe. There is no animation loop on this
+   page at all - which is why four moving cards cost nothing on a laptop that
+   is also driving a projector. */
+.cardbox { display: none; width: 100%; height: 100%; min-height: 0; }
+#animation.drawn .cardbox { display: flex; }
+#animation.drawn .what, #animation.drawn .note { display: none; }
+#animation.drawn { border-style: solid; padding: 14px 20px; overflow: hidden; }
+
+/* Height is the scarce dimension on a projector, so every box below gives the
+   drawings whatever is left and the SVGs scale into it. A lane can never push
+   the explanation off the bottom of the screen, whatever a part asks for. */
+.cards { display: flex; gap: 30px; width: 100%; height: 100%; min-height: 0;
+         align-items: stretch; justify-content: center; }
+.card { flex: 1 1 0; min-width: 0; max-width: 760px; text-align: left;
+        display: flex; flex-direction: column; min-height: 0; }
+.card h3 { flex: none; font-family: var(--hand); font-weight: 400;
+           font-size: clamp(17px, 1.9vw, 25px); color: var(--chalk); margin: 0 0 2px; }
+.card .held { flex: none; font-size: clamp(12px, 1.1vw, 15px);
+              color: var(--chalk-dim); margin: 0 0 4px; }
+
+.lane { border-top: 1px solid var(--rule-soft); padding-top: 4px; margin-top: 4px;
+         flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.lane-title { flex: none; display: flex; align-items: baseline;
+              justify-content: space-between; gap: 10px;
+              font-size: clamp(12px, 1.2vw, 16px); }
+.lane-title strong { font-weight: 600; }
+.lane-title span { color: var(--chalk-dim); font-size: .88em;
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* meet, not slice: the drawing shrinks to the room it is given and is never
+   cropped, however short the slot gets. */
+.lane svg { display: block; width: 100%; height: 100%; flex: 1 1 auto;
+            min-height: 58px; overflow: visible; }
+.lane-result { margin-left: auto; text-align: right; white-space: nowrap;
+               font-size: clamp(13px, 1.3vw, 17px); color: var(--emit); }
+.lane-result.none { color: var(--no-emit); }
+
+.takeaway { display: block; flex: none; font-family: var(--hand);
+            font-size: clamp(15px, 1.6vw, 21px); color: var(--accent);
+            margin: 8px 0 2px; }
+.card-note { flex: none; font-size: clamp(11px, 1.1vw, 14px);
+             color: var(--chalk-dim); margin: 0; }
+
+/* The one moving part on the page. Distance matches LANE.travel in anim.js. */
+.lane .e { animation: electron-travel var(--duration) linear infinite;
+           animation-delay: var(--delay); }
+@keyframes electron-travel {
+  from { transform: translateX(0); }
+  to   { transform: translateX(400px); }
+}
+/* Someone who asked not to see movement gets the same picture, held still. */
+@media (prefers-reduced-motion: reduce) {
+  .lane .e { animation: none; }
+}
 
 /* ---- The open question --------------------------------------------------
    A question TAKES OVER the stage rather than sitting under the animation.
@@ -222,7 +292,7 @@ body.toy .joinqr { display: none; }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=5" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=6" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -234,7 +304,8 @@ body.toy .joinqr { display: none; }
 
   <div class="parts">
     <div class="slot" id="animation">
-      <div class="what">Animation</div>
+      <div class="cardbox" id="anim"></div>
+      <div class="what" id="animationWhat">Animation</div>
       <div class="note" id="animationNote"></div>
       <div class="roombox" id="roombox" hidden>
         <div class="roomno">Group <strong id="roomno"></strong></div>
@@ -283,9 +354,10 @@ body.toy .joinqr { display: none; }
   </div>
 </main>
 
-<script src="physics.js?v=5"></script>
-<script src="questions.js?v=5"></script>
-<script src="live.js?v=5"></script>
+<script src="physics.js?v=6"></script>
+<script src="questions.js?v=6"></script>
+<script src="anim.js?v=6"></script>
+<script src="live.js?v=6"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -471,12 +543,21 @@ function paintExplanation(p) {
 
   if (p.lead) box.appendChild(el('div', 'lead', p.lead));
 
-  (p.groups || []).forEach(g => {
-    if (g.head) box.appendChild(el('div', 'grouphead', g.head));
+  /* Two headed groups sit side by side rather than stacking. A slide that
+     compares two things reads better as two columns, and stacking them is what
+     pushes a part like "more light? a different metal?" off the bottom. */
+  const groups = p.groups || [];
+  const columns = groups.length > 1 && groups.every(g => g.head);
+  const host = columns ? el('div', 'groupcols') : box;
+  groups.forEach(g => {
+    const col = columns ? el('div', 'groupcol') : host;
+    if (g.head) col.appendChild(el('div', 'grouphead', g.head));
     const ul = el('ul', 'bullets');
     g.items.forEach(t => ul.appendChild(el('li', null, t)));
-    box.appendChild(ul);
+    col.appendChild(ul);
+    if (columns) host.appendChild(col);
   });
+  if (columns) box.appendChild(host);
 
   if (p.formula) box.appendChild(el('div', 'formula', p.formula));
 
@@ -488,6 +569,25 @@ function paintExplanation(p) {
   }
 
   if (p.closing) box.appendChild(el('div', 'closing', p.closing));
+
+  fitExplanation(box);
+}
+
+/* Turn the slide's one font-size number down until the text fits the box.
+   Nothing on a projector should ever be half a line short of readable, and
+   nobody should have to remember this when rewriting a slide.
+
+   Bounded both ways: at most a dozen steps, and never below 0.62, because text
+   too small to read from the back is no better than text that is cut off - if
+   it bottoms out, the slide genuinely has too much on it. */
+function fitExplanation(box) {
+  let fit = 1;
+  box.style.setProperty('--fit', fit);
+  for (let i = 0; i < 12 && box.scrollHeight > box.clientHeight + 1; i++) {
+    fit -= 0.05;
+    if (fit < 0.62) break;
+    box.style.setProperty('--fit', fit.toFixed(2));
+  }
 }
 
 function render() {
@@ -497,6 +597,9 @@ function render() {
   $('where').textContent  = 'part ' + part + ' of ' + (PARTS.length - 1);
 
   $('animationNote').textContent = 'Part ' + part + ' — ' + p.title + '. To be built.';
+  /* The cards are drawn from physics() every time a part opens, so nothing is
+     animating off screen while another part is up. */
+  $('animation').classList.toggle('drawn', paintAnimationInto($('anim'), part));
   paintExplanation(p);
 
   document.body.classList.toggle('toy', part === PARTS.length - 1);
@@ -520,6 +623,13 @@ function goPart(delta) {
      question left open elsewhere is cleared. */
   Live.setPart(part);
 }
+
+/* The box changes size when the window does, and a fit computed for the old
+   size is just a guess about the new one. */
+window.addEventListener('resize', () => {
+  const box = $('explanation');
+  if (box.classList.contains('filled')) fitExplanation(box);
+});
 
 $('next').onclick = () => goPart(1);
 $('prev').onclick = () => goPart(-1);
