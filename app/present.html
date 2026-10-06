@@ -7,6 +7,11 @@
 <link rel="stylesheet" href="theme.css">
 <style>
 html, body { height: 100%; }
+
+/* The hidden attribute only works because the browser's default stylesheet
+   says display:none, so ANY author display rule silently beats it. That is how
+   the group box kept showing on every part. Make hidden actually mean hidden. */
+[hidden] { display: none !important; }
 body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 
 /* ---- The presenter's top bar. Everything is driven from here, by button. */
@@ -101,6 +106,29 @@ body.toy #endcard { display: flex; }
 
 .parts { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 0; }
 
+/* The join code. It lives in the corner through the whole talk, because at a
+   poster session people arrive in the middle and should not have to ask. */
+.joinqr {
+  position: fixed; right: 18px; bottom: 16px; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px; border-radius: 10px; background: #fff;
+  text-decoration: none; opacity: .9;
+  transition: width .25s, opacity .25s;
+}
+.joinqr img { display: block; width: 104px; height: 104px; }
+.joinqr span { font-family: var(--hand); font-size: 12px; color: #222; }
+
+/* Part 0 is where joining IS the content, so it grows and moves inboard. */
+/* On part 0 it grows and sits on the right, and the stage makes room for it
+   rather than letting it land on top of the text. */
+body.joining .joinqr { right: 5vw; bottom: 50%; transform: translateY(50%); opacity: 1; }
+body.joining .joinqr img { width: clamp(190px, 21vw, 290px); height: clamp(190px, 21vw, 290px); }
+body.joining .joinqr span { font-size: 16px; }
+body.joining .stage { padding-right: clamp(240px, 28vw, 380px); }
+
+/* Nothing to join once the quiz is over. */
+body.toy .joinqr { display: none; }
+
 /* Part 0 only: which room this group is in. The presenter says the number out
    loud and the audience taps it - no URL to read out, no QR to fail. */
 .roombox { display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -135,6 +163,13 @@ body.toy #endcard { display: flex; }
   <span class="live" id="live" title="connection to the quiz room">offline</span>
 </div>
 
+<!-- Always on screen, so someone arriving mid-talk can join without the
+     presenter stopping. Larger on part 0, where joining is the point. -->
+<a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
+  <img src="qr-quiz.png" alt="QR code to join the quiz">
+  <span>scan to join</span>
+</a>
+
 <main class="stage">
   <div class="head">
     <span class="partno" id="partno"></span>
@@ -147,7 +182,7 @@ body.toy #endcard { display: flex; }
       <div class="note" id="animationNote"></div>
       <div class="roombox" id="roombox" hidden>
         <div class="roomno">Group <strong id="roomno"></strong></div>
-        <p class="small">Everyone opens the quiz page. There is nothing to choose &mdash;
+        <p class="small">Scan the code. There is nothing to choose &mdash;
         whoever joins lands in this group.</p>
         <div class="joined" id="joined"></div>
       </div>
@@ -285,6 +320,7 @@ function render() {
   $('explanationNote').textContent = 'What the presenter says, and whatever text supports it. To be written.';
 
   document.body.classList.toggle('toy', part === PARTS.length - 1);
+  document.body.classList.toggle('joining', part === 0);
   if (typeof paintLive === 'function') paintLive();
   $('prev').disabled = part === 0;
   $('next').disabled = part === PARTS.length - 1;
