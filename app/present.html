@@ -126,7 +126,7 @@ body.toy #endcard { display: flex; }
     <div class="slot" id="question">
       <div class="qtag" id="qtag"></div>
       <div class="what" id="qwhat"></div>
-      <div class="note">Question text to come. The audience answers on their phones.</div>
+      <div class="note">The audience answers on their phones.</div>
       <div class="choices" id="choices"></div>
     </div>
 
@@ -143,42 +143,34 @@ body.toy #endcard { display: flex; }
   </div>
 </main>
 
+<script src="physics.js"></script>
+<script src="questions.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
 /* ---- The structure -----------------------------------------------------
-   Ten parts. `questions` is how many the part carries; the text, the
-   animations and the explanations are all still to be written, so every slot
-   on screen is an empty labelled box for now. Question numbering runs
-   Q1..Q6 across the whole talk, not per part. */
+   Ten parts. The animations and explanations are still to be written, so those
+   slots are empty labelled boxes.
+
+   The QUESTIONS are NOT defined here. They come from questions.js, which is the
+   single source: it holds the text, the options, and an answer DERIVED from
+   physics() rather than typed. Defining them here as well is how a presenter
+   screen and a phone end up showing different questions. */
 const PARTS = [
-  { title: 'Join',              questions: 0 },
-  { title: 'Intro',             questions: 0 },
-  { title: 'The puzzle',        questions: 1 },
-  { title: 'Light in packets',  questions: 1 },
-  { title: 'The work function', questions: 1 },
-  { title: 'The threshold',     questions: 1 },
-  { title: 'Leftover energy',   questions: 2 },
-  { title: 'The straight line', questions: 0 },
-  { title: 'Why it matters',    questions: 0 },
-  { title: 'Scores, then play', questions: 0 }
+  { title: 'Join' },
+  { title: 'Intro' },
+  { title: 'The puzzle' },
+  { title: 'Light in packets' },
+  { title: 'The work function' },
+  { title: 'The threshold' },
+  { title: 'Leftover energy' },
+  { title: 'The straight line' },
+  { title: 'Why it matters' },
+  { title: 'Scores, then play' }
 ];
 
-/* Give every question its number once, so the buttons and the slots agree,
-   and hang a placeholder set of choices off each.
-
-   `correct` is an ARRAY of indices, not a single one: a question is allowed
-   more than one right answer. All of this is placeholder - the real choices
-   arrive with the real question text. */
-let n = 0;
-PARTS.forEach(p => {
-  p.qs = Array.from({ length: p.questions }, () => ({
-    id: 'Q' + (++n),
-    choices: ['First choice', 'Second choice', 'Third choice'],
-    correct: [1]
-  }));
-});
-const TOTAL_QUESTIONS = n;
+/* Each part asks questions.js what it carries, rather than being told. */
+PARTS.forEach((p, i) => { p.qs = questionsForPart(i); });
 
 let part = 0;        /* which part is on screen */
 let openQ = null;    /* index into PARTS[part].qs, or null */
@@ -225,14 +217,18 @@ function toggleQuestion(i) {
 
 function showQuestion(q) {
   $('qtag').textContent = q.id;
-  $('qwhat').textContent = 'Question ' + q.id;
-  $('choices').innerHTML = q.choices
-    .map(c => '<div class="choice">' + c + '</div>').join('');
+  $('qwhat').textContent = q.text;
+  $('choices').innerHTML = q.options
+    .map(c => '<div class="choice"></div>').join('');
+  /* textContent, never innerHTML: question text is data, and a stray < would
+     otherwise become markup on the projector. */
+  $('choices').querySelectorAll('.choice')
+    .forEach((el, i) => el.textContent = q.options[i]);
 }
 
 function markCorrect(q) {
   const els = $('choices').querySelectorAll('.choice');
-  q.correct.forEach(i => { if (els[i]) els[i].classList.add('correct'); });
+  correctIndices(q).forEach(i => { if (els[i]) els[i].classList.add('correct'); });
 }
 
 /* ---- The stage ---------------------------------------------------------- */

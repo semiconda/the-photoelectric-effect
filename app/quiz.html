@@ -93,7 +93,6 @@ body.at-done    #done { display: flex; }
   <div>
     <div class="note" id="qtag"></div>
     <div class="big" id="qtext"></div>
-    <p class="placeholder">Question text to come.</p>
   </div>
   <div class="choices" id="choices"></div>
 </section>
@@ -115,23 +114,17 @@ body.at-done    #done { display: flex; }
   backend. Until then, each phone knows only its own score.</p>
 </section>
 
+<script src="physics.js"></script>
+<script src="questions.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
-/* ---- Structure only ----------------------------------------------------
-   Six questions, matching the allocation on present.html. The text and the
-   choices are placeholder - they arrive with the real content. `correct` is
-   an array because a question may have more than one right answer.
-
-   questions.js is deliberately NOT loaded yet. It already holds real question
-   text with answers computed from physics(), but this page is a skeleton, and
-   loading a file it does not use would just be weight on a phone. Wiring the
-   two together is the step that replaces these placeholders. */
-const QUIZ = Array.from({ length: 6 }, (_, i) => ({
-  id: 'Q' + (i + 1),
-  choices: ['First choice', 'Second choice', 'Third choice'],
-  correct: [1]
-}));
+/* ---- The questions -----------------------------------------------------
+   From questions.js, the single source. The presenter's screen reads the same
+   file, so the two cannot drift apart - and the answers are DERIVED from
+   physics() rather than typed, so the key cannot disagree with the simulation.
+   This page never decides what is correct; it asks. */
+const QUIZ = QUESTIONS;
 
 /* ---- Who you are -------------------------------------------------------
    Phase 1: the phone numbers itself from its own storage, so two phones can
@@ -185,17 +178,22 @@ function askNext() {
   if (at >= QUIZ.length) { finish(); return; }
   const q = QUIZ[at];
   $('qtag').textContent = q.id + ' · question ' + (at + 1) + ' of ' + QUIZ.length;
-  $('qtext').textContent = 'Question ' + q.id;
-  $('choices').innerHTML = q.choices
-    .map((c, i) => '<button type="button" class="choice" data-i="' + i + '">' + c + '</button>')
+  $('qtext').textContent = q.text;
+  $('choices').innerHTML = q.options
+    .map((c, i) => '<button type="button" class="choice" data-i="' + i + '"></button>')
     .join('');
-  $('choices').querySelectorAll('.choice').forEach(b => b.onclick = () => answer(+b.dataset.i, b));
+  /* textContent, never innerHTML: an option is data, and a stray < would
+     otherwise become markup. */
+  $('choices').querySelectorAll('.choice').forEach((b, i) => {
+    b.textContent = q.options[i];
+    b.onclick = () => answer(+b.dataset.i, b);
+  });
   show('ask');
 }
 
 function answer(i, btn) {
   const q = QUIZ[at];
-  const right = q.correct.indexOf(i) !== -1;
+  const right = correctIndices(q).indexOf(i) !== -1;
 
   /* One answer per question: everything locks the moment one is tapped. */
   $('choices').querySelectorAll('.choice').forEach(b => b.disabled = true);

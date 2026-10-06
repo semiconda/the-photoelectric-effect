@@ -101,6 +101,26 @@ function answerIndex(q) {
   return q.options.indexOf(q.compute());
 }
 
+/* The correct option indices, as an ARRAY: a question is allowed more than one
+   right answer, even though every question today has exactly one.
+
+   Throws rather than returning something wrong. A page that cannot work out
+   which answer is correct must fail loudly — marking the wrong option green on
+   a projector is the failure this whole file exists to prevent. */
+function correctIndices(q) {
+  const i = answerIndex(q);
+  if (i < 0) throw new Error('questions.js: ' + q.id + ' computed "' + q.compute()
+    + '", which matches none of its options');
+  return [i];
+}
+
+/* The questions belonging to one part of the talk, in order. This is what makes
+   questions.js the single source: the presentation no longer decides which
+   questions a part carries, it asks. */
+function questionsForPart(part) {
+  return QUESTIONS.filter(q => q.part === part);
+}
+
 /* Every question at once, for the self-check page and for any caller that
    wants to fail early rather than mid-presentation. */
 function checkQuestions() {
