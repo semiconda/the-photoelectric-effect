@@ -26,7 +26,7 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .topbar .live.on { color: var(--emit); border-color: var(--emit); }
 
 /* Restart is armed by the first press and only fires on the second. */
-#restart.arming { border-color: var(--no-emit); color: var(--no-emit); }
+#restart.arming, #newgroup.arming { border-color: var(--no-emit); color: var(--no-emit); }
 
 /* A question button: plain before it is asked, lit while its question is
    open, dimmed once it has been revealed. */
@@ -101,7 +101,12 @@ body.toy #endcard { display: flex; }
 
 .parts { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 0; }
 
-.joined { font-family: var(--hand); font-size: clamp(22px, 2.4vw, 32px); color: var(--accent); }
+/* Part 0 only: which room this group is in. The presenter says the number out
+   loud and the audience taps it - no URL to read out, no QR to fail. */
+.roombox { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.roomno { font-family: var(--hand); font-size: clamp(40px, 7vw, 90px); line-height: 1; }
+.roomno strong { color: var(--accent); font-weight: inherit; }
+.joined { font-family: var(--hand); font-size: clamp(18px, 2vw, 26px); color: var(--chalk-dim); }
 
 /* The leaderboard. Names come from the audience, so they are written with
    textContent only - a name containing markup must never become markup. */
@@ -122,6 +127,8 @@ body.toy #endcard { display: flex; }
   <button type="button" id="prev">&larr; Back</button>
   <button type="button" id="next">Next part &rarr;</button>
   <div class="sep"></div>
+  <button type="button" id="newgroup">New group</button>
+  <div class="sep"></div>
   <span class="qlabel" id="qlabel">No question here</span>
   <span id="qbuttons"></span>
   <span class="where" id="where"></span>
@@ -138,7 +145,12 @@ body.toy #endcard { display: flex; }
     <div class="slot" id="animation">
       <div class="what">Animation</div>
       <div class="note" id="animationNote"></div>
-      <div class="joined" id="joined" hidden></div>
+      <div class="roombox" id="roombox" hidden>
+        <div class="roomno">Group <strong id="roomno"></strong></div>
+        <p class="small">Everyone opens the quiz page. There is nothing to choose &mdash;
+        whoever joins lands in this group.</p>
+        <div class="joined" id="joined"></div>
+      </div>
     </div>
 
     <div class="slot" id="question">
@@ -330,39 +342,14 @@ let joinedCount = 0;
 
 function paintLive() {
   const on = Live.isOpen();
-  $('live').textContent = on ? 'live · ' + Live.room() : 'offline';
+  $('live').textContent = on ? 'live · group ' + Live.session() : 'offline';
   $('live').classList.toggle('on', on);
-  $('joined').hidden = !(on && part === 0);
-  if (on && part === 0) {
-    $('joined').textContent = joinedCount === 0
-      ? 'waiting for the first phone…'
-      : joinedCount + (joinedCount === 1 ? ' person has joined' : ' people have joined');
-  }
-}
 
-function paintBoard(rows) {
-  const board = $('board');
-  board.innerHTML = '';
-  if (!rows || !rows.length) {
-    $('boardNote').textContent = Live.isOpen()
-      ? 'Nobody has scored yet.'
-      : 'Not connected to the room — hold up your phone and compare.';
-    return;
-  }
-  $('boardNote').textContent = '';
-  rows.forEach(r => {
-    const li = document.createElement('li');
-    const name = document.createElement('span');
-    const score = document.createElement('span');
-    /* textContent, never innerHTML: these names were typed by the audience, and
-       a name containing markup must never become markup on the projector. */
-    name.textContent = r.display;
-    score.textContent = typeof r.correct === 'number'
-      ? r.score.toLocaleString() + '  (' + r.correct + ')'
-      : r.score;
-    li.appendChild(name); li.appendChild(score);
-    board.appendChild(li);
-  });
+  $('roombox').hidden = part !== 0;
+  $('roomno').textContent = Live.session() === null ? '—' : Live.session();
+  $('joined').textContent = !on ? 'not connected to the room'
+    : joinedCount === 0 ? 'waiting for the first phone…'
+    : joinedCount + (joinedCount === 1 ? ' person has joined' : ' people have joined');
 }
 
 Live.on((type, msg) => {
@@ -376,9 +363,34 @@ Live.on((type, msg) => {
       break;
     case 'close':        paintLive(); break;
     case 'joined-count': joinedCount = msg.n; paintLive(); break;
+    case 'sessionChanged':
+      joinedCount = 0; part = 0; render(); paintBoard([]); paintLive();
+      break;
     case 'standings':    paintBoard(msg.rows); break;
   }
 });
+
+/* New group: a second press, like Restart. It sweeps everyone into a fresh
+   leaderboard, so a stray click mid-group would be expensive. */
+let arming2 = null;
+function disarm2() {
+  arming2 = null;
+  $('newgroup').classList.remove('arming');
+  $('newgroup').textContent = 'New group';
+}
+$('newgroup').onclick = () => {
+  if (arming2) {
+    clearTimeout(arming2); disarm2();
+    Live.newSession();
+    return;
+  }
+  $('newgroup').classList.add('arming');
+  $('newgroup').textContent = 'Start a new group?';
+  arming2 = setTimeout(disarm2, 4000);
+};
+document.addEventListener('click', e => {
+  if (arming2 && !$('newgroup').contains(e.target)) { clearTimeout(arming2); disarm2(); }
+}, true);
 
 Live.start({ as: 'presenter' });
 

@@ -54,6 +54,7 @@ body.at-done    #done { display: flex; }
 #join button { font-size: 19px; padding: 16px; width: 100%; }
 
 .tally { font-family: var(--hand); font-size: clamp(44px, 16vw, 72px); color: var(--emit); }
+
 </style>
 </head>
 <body class="anon at-join">
@@ -171,8 +172,9 @@ function paintBar() {
 
 $('joinBtn').onclick = () => {
   const name = $('name').value.trim() || 'Anonymous';
-  Scoreboard.join(name);          /* local identity, immediately */
-  Live.join(name);                /* the server replaces it with a unique one */
+  try { localStorage.setItem('pe.name', JSON.stringify(name)); } catch (e) {}
+  Scoreboard.join(name);     /* local identity, immediately */
+  Live.join(name);           /* the server replaces it with one unique to the group */
   paintBar();
   show('wait');
 };
@@ -276,8 +278,16 @@ Live.on((type, msg) => {
       break;
 
     case 'unknown-token':
-      /* The room was reset, or this is a different run. Join afresh. */
-      if (Scoreboard.me()) Live.join(Scoreboard.me().name);
+      /* Our token belongs to a group that has finished. Join the live one
+         afresh - this is how someone who arrived early gets swept forward. */
+      if (Scoreboard.me()) { Scoreboard.reset(); joinAgain(); }
+      break;
+
+    case 'sessionChanged':
+      /* The presenter moved on to the next group. Everyone here comes too,
+         with a clean score, rather than being stranded on the old board. */
+      Scoreboard.reset();
+      joinAgain();
       break;
 
     case 'partOpened':
@@ -300,6 +310,18 @@ Live.on((type, msg) => {
       break;
   }
 });
+
+/* Re-join under the name already typed, without sending anyone back to the
+   join screen. */
+function joinAgain() {
+  let name = null;
+  try { name = JSON.parse(localStorage.getItem('pe.name')); } catch (e) {}
+  if (!name) { show('join'); return; }
+  Scoreboard.join(name);
+  Live.join(name);
+  paintBar();
+  show('wait');
+}
 
 function openFromServer(qid) {
   const q = QUIZ.find(x => x.id === qid);

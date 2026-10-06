@@ -1,8 +1,11 @@
 /* The Photoelectric Effect — the live quiz room.
  *
- * One Durable Object per run of the quiz, addressed by a room code. A new code
- * is a new object, empty by construction, which is how each of the 4–5 runs
- * gets a fresh leaderboard without a reset command to forget to press.
+ * ONE room, with a GROUP number inside it. The talk runs three times in ten
+ * minutes, poster-session style, and the audience must choose nothing: whoever
+ * joins lands in whichever group is live at that moment. When the presenter
+ * starts the next group, everyone still connected is swept into it with a clean
+ * score - so someone who joined early is not stranded on the previous group's
+ * leaderboard.
  *
  * Design and its independent review: BACKEND_STRUCTURE.md, BS_REPORT.md.
  *
@@ -49,8 +52,10 @@ export class Room {
         score     INTEGER NOT NULL DEFAULT 0,
         correct   INTEGER NOT NULL DEFAULT 0,
         token     TEXT    NOT NULL UNIQUE,
+        session   INTEGER NOT NULL DEFAULT 1,
         joined_at INTEGER NOT NULL
       )`);
+      try { this.sql.exec('ALTER TABLE players ADD COLUMN session INTEGER NOT NULL DEFAULT 1'); } catch (e) {}
       /* Rooms created before points existed keep the old shape, and
          CREATE TABLE IF NOT EXISTS will not change it. SQLite has no
          ADD COLUMN IF NOT EXISTS, so try and ignore the failure. */
@@ -59,10 +64,14 @@ export class Room {
       /* The key is stored PER QUESTION, not per room. One key per room
          mis-scores late answers silently: a backgrounded phone's answer for Q5
          arriving after Q6 opened would be graded against Q6's key. */
+      /* Keyed by session as well as question, so the same Q1 can be asked
+         again to the next group with its own clock. */
       this.sql.exec(`CREATE TABLE IF NOT EXISTS questions (
-        qid       TEXT PRIMARY KEY,
+        session   INTEGER NOT NULL DEFAULT 1,
+        qid       TEXT    NOT NULL,
         answer    TEXT    NOT NULL,
-        opened_at INTEGER NOT NULL
+        opened_at INTEGER NOT NULL,
+        PRIMARY KEY (session, qid)
       )`);
 
       /* The composite key is what stops a second answer existing at all. */
@@ -75,6 +84,8 @@ export class Room {
         at        INTEGER NOT NULL,
         PRIMARY KEY (player_id, qid)
       )`);
+      /* player_id already differs per group, so answers need no session of
+         their own: a swept player is a new row in players. */
       try { this.sql.exec('ALTER TABLE answers ADD COLUMN points INTEGER NOT NULL DEFAULT 0'); } catch (e) {}
 
       this.sql.exec(`CREATE TABLE IF NOT EXISTS room (
@@ -95,10 +106,21 @@ export class Room {
     this.sql.exec('INSERT OR REPLACE INTO room (k, v) VALUES (?, ?)', k, JSON.stringify(v));
   }
 
+  session() { return this.getState('session', 1); }
+
+  /* Only the group that is live. Previous groups stay in the table - nothing is
+     deleted - they simply stop being the leaderboard. */
   standings() {
-    return this.sql
-      .exec('SELECT display, score, correct FROM players ORDER BY score DESC, joined_at ASC')
-      .toArray();
+    return this.sql.exec(
+      'SELECT display, score, correct FROM players WHERE session = ? ORDER BY score DESC, joined_at ASC',
+      this.session()
+    ).toArray();
+  }
+
+  playerCount() {
+    return this.sql.exec(
+      'SELECT COUNT(*) AS n FROM players WHERE session = ?', this.session()
+    ).one().n;
   }
 
   send(ws, msg) {
@@ -126,7 +148,8 @@ export class Room {
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response(JSON.stringify({
         room: 'alive',
-        players: this.sql.exec('SELECT COUNT(*) AS n FROM players').one().n,
+        session: this.session(),
+        players: this.playerCount(),
         open: this.getState('open', null)
       }, null, 2) + '\n', { headers: { 'content-type': 'application/json' } });
     }
@@ -157,6 +180,7 @@ export class Room {
       type: 'hello',
       role: role,
       insecure: insecure,
+      session: this.session(),
       part: this.getState('part', null),
       open: this.getState('open', null),
       rows: role === 'presenter' ? this.standings() : undefined
@@ -179,8 +203,12 @@ export class Room {
          score of zero, in front of the room. */
       case 'resume': {
         const rows = this.sql.exec(
-          'SELECT id, display, score, correct FROM players WHERE token = ?', String(msg.token || '')
+          'SELECT id, display, score, correct, session FROM players WHERE token = ? AND session = ?',
+          String(msg.token || ''), this.session()
         ).toArray();
+        /* Unknown here also means "you belong to a group that has finished".
+           The phone answers by joining afresh, which is how a swept player
+           lands in the live group. */
         if (!rows.length) { this.send(ws, { type: 'unknown-token' }); return; }
         ws.serializeAttachment({ role: who.role, playerId: rows[0].id });
         this.send(ws, {
@@ -193,29 +221,31 @@ export class Room {
       }
 
       case 'join': {
-        const count = this.sql.exec('SELECT COUNT(*) AS n FROM players').one().n;
+        const session = this.session();
+        const count = this.playerCount();
         if (count >= MAX_PLAYERS) { this.send(ws, { type: 'full' }); return; }
 
         const name = String(msg.name || 'Anonymous').slice(0, MAX_NAME).trim() || 'Anonymous';
 
-        /* The number that tells two Johns apart. Assigned HERE, by the one
-           authority, which is the whole reason a server is involved in
-           identity at all. */
+        /* The number that tells two Johns apart, counted within this group so
+           each one starts again at #1. Assigned HERE, by the one authority,
+           which is the whole reason a server is involved in identity. */
         const same = this.sql.exec(
-          'SELECT COUNT(*) AS n FROM players WHERE name = ?', name
+          'SELECT COUNT(*) AS n FROM players WHERE name = ? AND session = ?', name, session
         ).one().n;
         const display = name + ' #' + (same + 1);
         const token = crypto.randomUUID();
 
         this.sql.exec(
-          'INSERT INTO players (name, display, score, token, joined_at) VALUES (?, ?, 0, ?, ?)',
-          name, display, token, Date.now()
+          'INSERT INTO players (name, display, score, token, session, joined_at) VALUES (?, ?, 0, ?, ?, ?)',
+          name, display, token, session, Date.now()
         );
         const id = this.sql.exec('SELECT last_insert_rowid() AS id').one().id;
         ws.serializeAttachment({ role: who.role, playerId: id });
 
         this.send(ws, {
           type: 'joined', id: id, display: display, token: token, score: 0, correctCount: 0,
+          session: session,
           part: this.getState('part', null), open: this.getState('open', null)
         });
         this.broadcast({ type: 'joined-count', n: count + 1 }, 'presenter');
@@ -234,8 +264,8 @@ export class Room {
            already known is a no-op, which makes a presenter reload mid-question
            safe rather than a way to change the answer. */
         this.sql.exec(
-          'INSERT OR IGNORE INTO questions (qid, answer, opened_at) VALUES (?, ?, ?)',
-          qid, JSON.stringify(msg.answer || []), Date.now()
+          'INSERT OR IGNORE INTO questions (session, qid, answer, opened_at) VALUES (?, ?, ?, ?)',
+          this.session(), qid, JSON.stringify(msg.answer || []), Date.now()
         );
         this.setState('part', msg.part == null ? null : msg.part);
         this.setState('open', { qid: qid, part: msg.part == null ? null : msg.part });
@@ -250,6 +280,27 @@ export class Room {
         return;
       }
 
+      /* Start the next group. Nothing is deleted - the previous group's rows
+         stay where they are and simply stop being the leaderboard. Everyone
+         still connected is told, so phones that joined early are swept in with
+         a clean score instead of being stranded on the old board. */
+      case 'newSession': {
+        if (who.role !== 'presenter') return;
+        const next = this.session() + 1;
+        this.setState('session', next);
+        this.setState('part', 0);
+        this.setState('open', null);
+        /* Connected players are no longer registered: their token belongs to
+           the previous group, so the next thing they send is a fresh join. */
+        for (const sock of this.state.getWebSockets()) {
+          const w = sock.deserializeAttachment() || {};
+          if (w.role !== 'presenter') sock.serializeAttachment({ role: w.role, playerId: null });
+        }
+        this.broadcast({ type: 'sessionChanged', session: next, part: 0 });
+        this.pushStandings();
+        return;
+      }
+
       case 'setPart': {
         if (who.role !== 'presenter') return;
         this.setState('part', msg.part == null ? null : msg.part);
@@ -261,7 +312,9 @@ export class Room {
       case 'answer': {
         if (!who.playerId) { this.send(ws, { type: 'not-joined' }); return; }
         const qid = String(msg.qid || '');
-        const rows = this.sql.exec('SELECT answer, opened_at FROM questions WHERE qid = ?', qid).toArray();
+        const rows = this.sql.exec(
+          'SELECT answer, opened_at FROM questions WHERE qid = ? AND session = ?', qid, this.session()
+        ).toArray();
         if (!rows.length) { this.send(ws, { type: 'not-open', qid: qid }); return; }
 
         /* Late answers are accepted on purpose. The key for THAT question is

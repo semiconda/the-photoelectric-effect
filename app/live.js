@@ -13,12 +13,10 @@ const Live = (function () {
   /* The deployed room. Change this if the Worker moves. */
   const ENDPOINT = 'wss://the-photoelectric-effect.a15222103.workers.dev/ws';
 
-  /* Which run of the quiz. The QR code carries it, so phones land in the same
-     room as the presenter; a new code is a new, empty leaderboard. */
-  function roomCode() {
-    const p = new URLSearchParams(location.search).get('room');
-    return (p || 'r1').slice(0, 32);
-  }
+  /* ONE room. Which GROUP is live is decided by the presenter and lives on the
+     server, so the audience chooses nothing: whoever joins lands in whatever
+     group is running at that moment. */
+  const ROOM = 'main';
 
   let ws = null;
   let role = 'player';
@@ -27,6 +25,7 @@ const Live = (function () {
   let openQuestion = null;
   let retry = 0;
   let wantOpen = false;
+  let session = null;      /* which group the server says is live */
   const listeners = [];
 
   function emit(type, detail) {
@@ -35,7 +34,7 @@ const Live = (function () {
 
   function url() {
     const u = new URL(ENDPOINT);
-    u.searchParams.set('room', roomCode());
+    u.searchParams.set('room', ROOM);
     if (role === 'presenter') {
       u.searchParams.set('role', 'presenter');
       const secret = new URLSearchParams(location.search).get('secret');
@@ -58,6 +57,7 @@ const Live = (function () {
       if (msg.type === 'hello') {
         open = true;
         part = msg.part;
+        session = msg.session;
         openQuestion = msg.open;
         emit('open', msg);
         /* Come back as who we were before the screen locked, rather than
@@ -67,6 +67,7 @@ const Live = (function () {
         return;
       }
 
+      if (msg.type === 'sessionChanged') { session = msg.session; part = msg.part; openQuestion = null; }
       if (msg.type === 'partOpened')   { part = msg.part; openQuestion = { qid: msg.qid, part: msg.part }; }
       if (msg.type === 'questionClosed') openQuestion = null;
       if (msg.type === 'partChanged')  { part = msg.part; openQuestion = null; }
@@ -109,7 +110,7 @@ const Live = (function () {
     stop() { wantOpen = false; if (ws) try { ws.close(); } catch (e) {} },
 
     isOpen:       () => open,
-    room:         () => roomCode(),
+    session:      () => session,
     currentPart:  () => part,
     openQuestion: () => openQuestion,
 
@@ -122,6 +123,9 @@ const Live = (function () {
       return send({ type: 'openPart', part: part, qid: qid, answer: answer });
     },
     closeQuestion(qid) { return send({ type: 'closeQuestion', qid: qid }); },
-    setPart(part)      { return send({ type: 'setPart', part: part }); }
+    setPart(part)      { return send({ type: 'setPart', part: part }); },
+
+    /* Presenter only: start the next group of the poster session. */
+    newSession()       { return send({ type: 'newSession' }); }
   };
 })();
