@@ -83,9 +83,8 @@ body.at-done    #done { display: flex; }
 <section class="screen" id="wait">
   <div class="waiting"><span class="dot"></span><span id="waitText">Waiting for the next question…</span></div>
   <p class="note">Keep this page open and watch the screen at the front.</p>
-  <p class="placeholder">Placeholder: for now this page moves itself along. Once the backend is
-  live, the presenter opens each question and this waits for them.</p>
-  <button type="button" id="waitNext">Next question (stand-in for the presenter)</button>
+  <p class="placeholder" id="waitNote"></p>
+  <button type="button" id="waitNext" hidden>Next question (stand-in for the presenter)</button>
 </section>
 
 <!-- 3. A question -------------------------------------------------------- -->
@@ -102,7 +101,7 @@ body.at-done    #done { display: flex; }
   <div class="big" id="sentMsg">Answer sent</div>
   <p class="note" id="sentSub"></p>
   <div class="waiting"><span class="dot"></span><span>Waiting for the next question…</span></div>
-  <button type="button" id="sentNext">Next question (stand-in for the presenter)</button>
+  <button type="button" id="sentNext" hidden>Next question (stand-in for the presenter)</button>
 </section>
 
 <!-- 5. Finished ---------------------------------------------------------- -->
@@ -110,13 +109,13 @@ body.at-done    #done { display: flex; }
   <div class="big">That's the lot</div>
   <div class="tally" id="tally"></div>
   <p class="note">Hold up your phone so everyone can see.</p>
-  <p class="placeholder">Placeholder: the shared leaderboard on the front screen needs the
-  backend. Until then, each phone knows only its own score.</p>
+  <p class="placeholder" id="doneNote"></p>
 </section>
 
 <script src="physics.js"></script>
 <script src="questions.js"></script>
 <script src="scoreboard.js"></script>
+<script src="live.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -132,7 +131,25 @@ const QUIZ = QUESTIONS;
    network itself, so when the backend arrives it plugs in behind that module
    and nothing here changes. */
 
+let current = null;      /* the question on screen, if any */
+
 function answeredCount() { return Object.keys(Scoreboard.answers()).length; }
+
+/* Offline, the page walks itself forward and says so. Online, it waits. */
+function paintMode() {
+  const on = Scoreboard.isOnline();
+  $('waitNext').hidden = on;
+  $('sentNext').hidden = on;
+  $('waitText').textContent = on
+    ? 'Waiting for the next question…'
+    : 'Not connected — this page is running on its own.';
+  $('waitNote').textContent = on
+    ? ''
+    : 'No connection to the room, so this phone keeps its own score and moves at your pace.';
+  $('doneNote').textContent = on
+    ? ''
+    : 'No connection to the room, so only this phone knows this score.';
+}
 
 function show(where) {
   document.body.className = (Scoreboard.me() ? '' : 'anon ') + 'at-' + where;
@@ -149,7 +166,9 @@ function paintBar() {
 /* ---- Join --------------------------------------------------------------- */
 
 $('joinBtn').onclick = () => {
-  Scoreboard.join($('name').value.trim() || 'Anonymous');
+  const name = $('name').value.trim() || 'Anonymous';
+  Scoreboard.join(name);          /* local identity, immediately */
+  Live.join(name);                /* the server replaces it with a unique one */
   paintBar();
   show('wait');
 };
@@ -161,8 +180,17 @@ $('name').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn')
 function askNext() {
   const at = answeredCount();
   if (at >= QUIZ.length) { finish(); return; }
-  const q = QUIZ[at];
-  $('qtag').textContent = q.id + ' · question ' + (at + 1) + ' of ' + QUIZ.length;
+  ask(QUIZ[at]);
+}
+
+/* Show one particular question. Online this is driven by the presenter; offline
+   the page walks itself through them in order. */
+function ask(q) {
+  if (!q) return;
+  if (Scoreboard.hasAnswered(q.id)) { show('sent'); return; }
+  current = q;
+  const n = QUIZ.indexOf(q) + 1;
+  $('qtag').textContent = q.id + ' · question ' + n + ' of ' + QUIZ.length;
   $('qtext').textContent = q.text;
   $('choices').innerHTML = q.options
     .map((c, i) => '<button type="button" class="choice" data-i="' + i + '"></button>')
@@ -177,14 +205,18 @@ function askNext() {
 }
 
 function answer(i, btn) {
-  const q = QUIZ[answeredCount()];
+  const q = current;
+  if (!q) return;
   const right = correctIndices(q).indexOf(i) !== -1;
 
   /* One answer per question: everything locks the moment one is tapped. */
   $('choices').querySelectorAll('.choice').forEach(b => b.disabled = true);
   btn.classList.add('picked');
 
+  /* Scored locally in parallel, always, so a dropped socket costs nothing.
+     The server scores it independently and its answer wins when it arrives. */
   Scoreboard.submitAnswer(q.id, i, right);
+  current = null;
 
   $('sentMsg').textContent = right ? 'Correct' : 'Answer sent';
   $('sentSub').textContent = right
@@ -192,7 +224,9 @@ function answer(i, btn) {
     : 'Watch the front screen for the answer.';
   paintBar();
 
-  const done = answeredCount() >= QUIZ.length;
+  /* Online, the presenter decides what comes next, so this always lands on the
+     waiting screen. Offline, finishing the last question ends the quiz. */
+  const done = !Scoreboard.isOnline() && answeredCount() >= QUIZ.length;
   setTimeout(() => done ? finish() : show('sent'), 450);
 }
 
@@ -205,6 +239,67 @@ $('waitNext').onclick = askNext;
 $('sentNext').onclick = askNext;
 
 /* ---- Start -------------------------------------------------------------- */
+
+/* ---- The room -----------------------------------------------------------
+   Everything below is optional. If the room cannot be reached, the page runs
+   exactly as it did before: own score, own pace. */
+
+Live.on((type, msg) => {
+  switch (type) {
+    case 'open':
+      Scoreboard.attach(Live);
+      paintMode();
+      /* Already joined and already mid-quiz? Pick up whatever is open now. */
+      if (msg.open && Scoreboard.me()) openFromServer(msg.open.qid);
+      break;
+
+    case 'close':
+      Scoreboard.detach('connection lost');
+      paintMode();
+      break;
+
+    case 'joined':
+      /* The server's number is unique across the room; ours never was. */
+      Scoreboard.adopt(msg);
+      paintBar();
+      if (msg.open) openFromServer(msg.open.qid);
+      break;
+
+    case 'unknown-token':
+      /* The room was reset, or this is a different run. Join afresh. */
+      if (Scoreboard.me()) Live.join(Scoreboard.me().name);
+      break;
+
+    case 'partOpened':
+      openFromServer(msg.qid);
+      break;
+
+    case 'questionClosed':
+    case 'partChanged':
+      if (document.body.className.indexOf('at-ask') !== -1) show('sent');
+      break;
+
+    case 'answered':
+      /* The server scored it. Its number wins over ours. */
+      Scoreboard.syncScore(msg.score);
+      paintBar();
+      break;
+
+    case 'full':
+      $('waitText').textContent = 'The room is full.';
+      break;
+  }
+});
+
+function openFromServer(qid) {
+  const q = QUIZ.find(x => x.id === qid);
+  if (!q) return;
+  if (Scoreboard.hasAnswered(q.id)) { show('sent'); return; }
+  ask(q);
+}
+
+Live.start({ as: 'player' });
+paintMode();
 
 if (Scoreboard.me()) {
   paintBar();

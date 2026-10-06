@@ -20,6 +20,10 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .topbar button { font-size: 16px; padding: 9px 16px; }
 .topbar .sep { width: 1px; height: 26px; background: var(--rule); margin: 0 6px; }
 .topbar .where { font-size: 13px; color: var(--chalk-dim); margin-left: auto; white-space: nowrap; }
+.topbar .live { font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+                color: var(--no-emit); border: 1px solid var(--rule); border-radius: 999px;
+                padding: 3px 10px; white-space: nowrap; }
+.topbar .live.on { color: var(--emit); border-color: var(--emit); }
 
 /* Restart is armed by the first press and only fires on the second. */
 #restart.arming { border-color: var(--no-emit); color: var(--no-emit); }
@@ -96,6 +100,18 @@ body.toy .parts { display: none; }
 body.toy #endcard { display: flex; }
 
 .parts { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 0; }
+
+.joined { font-family: var(--hand); font-size: clamp(22px, 2.4vw, 32px); color: var(--accent); }
+
+/* The leaderboard. Names come from the audience, so they are written with
+   textContent only - a name containing markup must never become markup. */
+.board { list-style: none; margin: 0; padding: 0; width: min(520px, 100%);
+         display: flex; flex-direction: column; gap: 8px; }
+.board li { display: flex; justify-content: space-between; gap: 18px;
+            font-family: var(--hand); font-size: clamp(18px, 2vw, 26px);
+            border: 1px solid var(--rule); border-radius: 10px;
+            padding: 10px 16px; background: var(--board-sunk); }
+.board li:first-child { border-color: var(--emit); color: var(--emit); }
 </style>
 </head>
 <body>
@@ -109,6 +125,7 @@ body.toy #endcard { display: flex; }
   <span class="qlabel" id="qlabel">No question here</span>
   <span id="qbuttons"></span>
   <span class="where" id="where"></span>
+  <span class="live" id="live" title="connection to the quiz room">offline</span>
 </div>
 
 <main class="stage">
@@ -121,6 +138,7 @@ body.toy #endcard { display: flex; }
     <div class="slot" id="animation">
       <div class="what">Animation</div>
       <div class="note" id="animationNote"></div>
+      <div class="joined" id="joined" hidden></div>
     </div>
 
     <div class="slot" id="question">
@@ -138,13 +156,15 @@ body.toy #endcard { display: flex; }
 
   <div id="endcard">
     <h2>Scores</h2>
-    <p class="small">Hold up your phone and compare.</p>
+    <ol class="board" id="board"></ol>
+    <p class="small" id="boardNote">Hold up your phone and compare.</p>
     <a class="btn" href="index.html">Open the simulation and play &rarr;</a>
   </div>
 </main>
 
 <script src="physics.js"></script>
 <script src="questions.js"></script>
+<script src="live.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -208,9 +228,18 @@ function paintQuestionButtons() {
      3. close  - back to the part */
 function toggleQuestion(i) {
   const q = PARTS[part].qs[i];
-  if (openQ !== i)      { openQ = i; revealed = false; showQuestion(q); }
-  else if (!revealed)   { revealed = true; markCorrect(q); }
-  else                  { openQ = null; revealed = false; asked.add(q.id); }
+  if (openQ !== i) {
+    openQ = i; revealed = false; showQuestion(q);
+    /* Open it on every phone at the same moment. The ANSWER travels with it,
+       computed here from physics.js - the server never works it out, so the
+       formula exists in exactly one place. */
+    Live.openQuestionFor(part, q.id, correctIndices(q));
+  } else if (!revealed) {
+    revealed = true; markCorrect(q);
+  } else {
+    openQ = null; revealed = false; asked.add(q.id);
+    Live.closeQuestion(q.id);
+  }
   document.body.classList.toggle('asking', openQ !== null);
   paintQuestionButtons();
 }
@@ -243,6 +272,7 @@ function render() {
   $('explanationNote').textContent = 'What the presenter says, and whatever text supports it. To be written.';
 
   document.body.classList.toggle('toy', part === PARTS.length - 1);
+  if (typeof paintLive === 'function') paintLive();
   $('prev').disabled = part === 0;
   $('next').disabled = part === PARTS.length - 1;
 
@@ -257,6 +287,9 @@ function goPart(delta) {
   if (next < 0 || next >= PARTS.length) return;
   part = next;
   render();
+  /* Tell the room, so a phone joining late lands on the right part and any
+     question left open elsewhere is cleared. */
+  Live.setPart(part);
 }
 
 $('next').onclick = () => goPart(1);
@@ -276,6 +309,7 @@ $('restart').onclick = () => {
     clearTimeout(arming);
     disarm();
     part = 0; asked.clear(); render();
+    Live.setPart(part);
     return;
   }
   $('restart').classList.add('arming');
@@ -287,7 +321,66 @@ document.addEventListener('click', e => {
   if (arming && !$('restart').contains(e.target)) { clearTimeout(arming); disarm(); }
 }, true);
 
+/* ---- The room -----------------------------------------------------------
+   Optional throughout. With no connection the presentation runs exactly as it
+   does now; the phones simply are not following along. */
+
+let joinedCount = 0;
+
+function paintLive() {
+  const on = Live.isOpen();
+  $('live').textContent = on ? 'live · ' + Live.room() : 'offline';
+  $('live').classList.toggle('on', on);
+  $('joined').hidden = !(on && part === 0);
+  if (on && part === 0) {
+    $('joined').textContent = joinedCount === 0
+      ? 'waiting for the first phone…'
+      : joinedCount + (joinedCount === 1 ? ' person has joined' : ' people have joined');
+  }
+}
+
+function paintBoard(rows) {
+  const board = $('board');
+  board.innerHTML = '';
+  if (!rows || !rows.length) {
+    $('boardNote').textContent = Live.isOpen()
+      ? 'Nobody has scored yet.'
+      : 'Not connected to the room — hold up your phone and compare.';
+    return;
+  }
+  $('boardNote').textContent = '';
+  rows.forEach(r => {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    const score = document.createElement('span');
+    /* textContent, never innerHTML: these names were typed by the audience, and
+       a name containing markup must never become markup on the projector. */
+    name.textContent = r.display;
+    score.textContent = r.score;
+    li.appendChild(name); li.appendChild(score);
+    board.appendChild(li);
+  });
+}
+
+Live.on((type, msg) => {
+  switch (type) {
+    case 'open':
+      paintLive();
+      if (msg.rows) paintBoard(msg.rows);
+      if (msg.insecure) $('live').title =
+        'no PRESENTER_SECRET set — anyone could drive this room';
+      Live.setPart(part);
+      break;
+    case 'close':        paintLive(); break;
+    case 'joined-count': joinedCount = msg.n; paintLive(); break;
+    case 'standings':    paintBoard(msg.rows); break;
+  }
+});
+
+Live.start({ as: 'presenter' });
+
 render();
+paintLive();
 </script>
 </body>
 </html>

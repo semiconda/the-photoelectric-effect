@@ -120,9 +120,41 @@ const Scoreboard = (function () {
       emit('reset', null);
     },
 
-    /* Task F calls this with a WebSocket client. Everything above keeps
-       working unchanged; the only difference is that answers are also sent,
-       and 'partOpened' starts arriving. */
+    /* The server's identity replaces the one this phone invented. Its number
+       is unique across the room; ours never could be. Called on 'joined'. */
+    adopt(server) {
+      me = {
+        name: me ? me.name : server.display,
+        n: server.id,
+        display: server.display,
+        token: server.token
+      };
+      set('pe.me', me);
+      if (typeof server.score === 'number') { score = server.score; set('pe.score', score); }
+      emit('joined', me);
+      return me;
+    },
+
+    /* The server's score wins. A phone must not be able to disagree with the
+       room about what it scored. */
+    syncScore(n) {
+      if (typeof n !== 'number' || n === score) return;
+      score = n;
+      set('pe.score', score);
+      emit('answered', { qid: null, choice: null, correct: null, score: score });
+    },
+
+    /* Record that a question was answered without scoring it again - used when
+       the server confirms an answer this phone already counted locally. */
+    noteAnswered(qid, choice) {
+      if (this.hasAnswered(qid)) return;
+      answers[qid] = choice;
+      set('pe.answers', answers);
+    },
+
+    /* The transport, when one is connected. Everything above keeps working
+       unchanged; the only difference is that answers are also sent, and
+       questions start arriving instead of the page walking itself forward. */
     attach(t) {
       transport = t;
       online = true;
