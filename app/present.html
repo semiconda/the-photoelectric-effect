@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '4';
+const BUILD = '5';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=4">
+<link rel="stylesheet" href="theme.css?v=5">
 <style>
 html, body { height: 100%; }
 
@@ -222,7 +222,7 @@ body.toy .joinqr { display: none; }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=4" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=5" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -283,9 +283,9 @@ body.toy .joinqr { display: none; }
   </div>
 </main>
 
-<script src="physics.js?v=4"></script>
-<script src="questions.js?v=4"></script>
-<script src="live.js?v=4"></script>
+<script src="physics.js?v=5"></script>
+<script src="questions.js?v=5"></script>
+<script src="live.js?v=5"></script>
 <script>
 const $ = id => document.getElementById(id);
 
