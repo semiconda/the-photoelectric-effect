@@ -31,14 +31,40 @@
  * it costs the page a few kilobytes. Classic script, like physics.js.
  */
 
-/* Verbatim from index.html, so light of a given wavelength is the same colour
-   on every page of this project. */
-function lightColor(w) {
-  if (w < 380) return '#b69aff';
-  if (w > 750) return '#d86b58';
-  const hue = 270 - (w - 380) / (750 - 380) * 270;
-  return 'hsl(' + hue + ',85%,68%)';
+/* Wavelength to colour.
+ *
+ * index.html does this by sweeping hue from 270 to 0 across 380-750 nm, which
+ * puts 700 nm at hue 36 - orange. On a slide whose whole point is "this is the
+ * red one", orange is wrong, so this page uses the standard piecewise spectral
+ * approximation instead: 700 nm is red, 400 nm is violet, and the greens and
+ * yellows in between land where a spectrum chart puts them.
+ *
+ * The usual brightness falloff at the two ends is deliberately NOT applied -
+ * it exists to mimic the eye's response, and on a dark board it would render
+ * deep red as nearly black. Everything is lifted toward white instead, so the
+ * ends stay legible from the back of a room.
+ *
+ * Consequence worth knowing: 700 nm is a slightly different colour here than
+ * in the toy at the end. The toy is a different page with its own palette; the
+ * numbers, which are what the quiz is scored on, come from physics.js in both.
+ */
+function spectralColor(w) {
+  if (w < 380) return '#a98cff';          /* ultraviolet, by convention */
+  if (w > 780) return '#8d2b20';
+  let r = 0, g = 0, b = 0;
+  if (w < 440)      { r = -(w - 440) / 60; b = 1; }
+  else if (w < 490) { g = (w - 440) / 50;  b = 1; }
+  else if (w < 510) { g = 1; b = -(w - 510) / 20; }
+  else if (w < 580) { r = (w - 510) / 70;  g = 1; }
+  else if (w < 645) { r = 1; g = -(w - 645) / 65; }
+  else              { r = 1; }
+  /* Lift toward white so every part of the spectrum reads on a dark board. */
+  const lift = c => Math.round(255 * (c + (1 - c) * 0.22));
+  return 'rgb(' + lift(r) + ',' + lift(g) + ',' + lift(b) + ')';
 }
+
+/* The name the rest of this file calls it by. */
+const lightColor = spectralColor;
 
 /* The lane geometry, shared by every drawing so the plates line up down the
    card however many lanes it has. */
@@ -118,11 +144,14 @@ function buildLane(spec) {
     'aria-label': spec.label + ': ' + resultText(spec, r)
   });
 
-  /* Two wave lines, so it reads as a beam rather than a single ray. The beam
-     runs the whole lane when there is no plate for it to stop at. */
-  const end = spec.show === 'energy' ? LANE.w - 16 : LANE.waveEnd;
-  [30, 50].forEach(y => svg.appendChild(svgEl('path', {
-    d: wavePath(y, spec.wavelength, end), fill: 'none', stroke: colour, 'stroke-width': 2.4
+  /* Two wave lines where the light is a BEAM arriving at something. One where
+     the slide is about a single photon's wave, which is slide 1: a second line
+     there only invites "what is the other one?". */
+  const bare = spec.show === 'energy';
+  const end  = bare ? LANE.w - 16 : LANE.waveEnd;
+  (bare ? [40] : [30, 50]).forEach(y => svg.appendChild(svgEl('path', {
+    d: wavePath(y, spec.wavelength, end), fill: 'none', stroke: colour,
+    'stroke-width': bare ? 3 : 2.4
   })));
   /* The arrow that says which way it is going. */
   if (spec.show !== 'energy') svg.appendChild(svgEl('path', {
@@ -182,9 +211,91 @@ function resultText(spec, r) {
   return 'Kₘₐₓ = ' + r.k.toFixed(2) + ' eV';
 }
 
+/* ---- The spectrum --------------------------------------------------------
+   A reference strip for slide 1, so the two waves on its left are not floating
+   in the abstract: here is where red and violet actually sit, and here is what
+   every colour between them is worth.
+
+   Wavelengths label the top, the energy each one carries labels the bottom,
+   and the two arrows say which way each quantity runs - which is the one thing
+   people get backwards. Every energy is hc/lambda through physics(), so this
+   strip cannot drift from the quiz. */
+const SPECTRUM = { from: 380, to: 720, marks: [400, 450, 500, 550, 600, 650, 700] };
+
+function buildSpectrum() {
+  const W = 520, H = 230;
+  const x0 = 54, x1 = W - 20, barY = 96, barH = 40;
+  const at = w => x0 + (w - SPECTRUM.from) / (SPECTRUM.to - SPECTRUM.from) * (x1 - x0);
+
+  const svg = svgEl('svg', {
+    viewBox: '0 0 ' + W + ' ' + H, class: 'spectrum',
+    role: 'img', 'aria-label': 'Visible spectrum from 380 to 720 nanometres, '
+      + 'with the photon energy of each colour'
+  });
+
+  /* The strip itself: real colours, sampled every 10 nm. */
+  const grad = svgEl('linearGradient', { id: 'specgrad', x1: '0', x2: '1', y1: '0', y2: '0' });
+  for (let w = SPECTRUM.from; w <= SPECTRUM.to; w += 10) {
+    grad.appendChild(svgEl('stop', {
+      offset: ((w - SPECTRUM.from) / (SPECTRUM.to - SPECTRUM.from) * 100).toFixed(1) + '%',
+      'stop-color': spectralColor(w)
+    }));
+  }
+  const defs = svgEl('defs', {});
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+  svg.appendChild(svgEl('rect', {
+    x: x0, y: barY, width: x1 - x0, height: barH, rx: 4, fill: 'url(#specgrad)'
+  }));
+
+  const text = (x, y, str, cls, anchor) => {
+    const t = svgEl('text', { x: x, y: y, class: cls, 'text-anchor': anchor || 'middle' });
+    t.textContent = str;
+    return t;
+  };
+
+  /* Where each reference colour sits, what it is worth. */
+  SPECTRUM.marks.forEach(w => {
+    const x = at(w);
+    svg.appendChild(svgEl('line', {
+      x1: x, x2: x, y1: barY - 6, y2: barY + barH + 6,
+      stroke: 'var(--board)', 'stroke-width': 1.5, opacity: '.55'
+    }));
+    svg.appendChild(text(x, barY - 12, w, 'sp-nm'));
+    /* The energy is READ OFF physics(), never written down here. */
+    svg.appendChild(text(x, barY + barH + 24,
+      physics(w, 50, 2.30).energy.toFixed(2), 'sp-ev'));
+  });
+  svg.appendChild(text(x0 - 8, barY - 12, 'nm', 'sp-unit', 'end'));
+  svg.appendChild(text(x0 - 8, barY + barH + 24, 'eV', 'sp-unit', 'end'));
+
+  /* The two directions. This is the part people get backwards. */
+  const arrow = (y, dir, label) => {
+    const ax0 = x0, ax1 = x1;
+    const head = dir > 0
+      ? 'M ' + (ax1 - 11) + ' ' + (y - 5) + ' l 11 5 l -11 5'
+      : 'M ' + (ax0 + 11) + ' ' + (y - 5) + ' l -11 5 l 11 5';
+    svg.appendChild(svgEl('path', {
+      d: 'M ' + ax0 + ' ' + y + ' H ' + ax1 + ' ' + head,
+      fill: 'none', stroke: 'var(--chalk-dim)', 'stroke-width': 1.6,
+      'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+    }));
+    const t = text(dir > 0 ? ax1 - 4 : ax0 + 4, y - 11, label, 'sp-dir',
+                   dir > 0 ? 'end' : 'start');
+    svg.appendChild(t);
+  };
+  arrow(34, 1, 'longer wavelength →');
+  arrow(H - 20, -1, '← more energy per photon');
+
+  const box = document.createElement('div');
+  box.className = 'aside';
+  box.appendChild(svg);
+  return box;
+}
+
 function buildCard(card) {
   const el = document.createElement('article');
-  el.className = 'card';
+  el.className = 'card' + (card.aside ? ' wide' : '');
 
   const h = document.createElement('h3');
   h.textContent = card.title;
@@ -195,7 +306,19 @@ function buildCard(card) {
   held.textContent = card.held;
   el.appendChild(held);
 
-  card.lanes.forEach(spec => el.appendChild(buildLane(spec)));
+  if (card.aside === 'spectrum') {
+    /* Lanes on the left, the reference strip on the right. */
+    const row = document.createElement('div');
+    row.className = 'cardrow';
+    const left = document.createElement('div');
+    left.className = 'cardlanes';
+    card.lanes.forEach(spec => left.appendChild(buildLane(spec)));
+    row.appendChild(left);
+    row.appendChild(buildSpectrum());
+    el.appendChild(row);
+  } else {
+    card.lanes.forEach(spec => el.appendChild(buildLane(spec)));
+  }
 
   const take = document.createElement('strong');
   take.className = 'takeaway';
@@ -225,6 +348,7 @@ function ANIMATIONS(part) {
       { wavelength: 700, intensity: 50, phi: Na, label: '700 nm', sub: 'Red',    show: 'energy' },
       { wavelength: 400, intensity: 50, phi: Na, label: '400 nm', sub: 'Violet', show: 'energy' }
     ],
+    aside: 'spectrum',
     takeaway: 'Same beam, different photons.',
     note: 'The tighter the wave, the more energy each photon carries.'
   }];
