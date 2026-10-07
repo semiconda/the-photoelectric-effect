@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '13';
+const BUILD = '14';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=13">
+<link rel="stylesheet" href="theme.css?v=14">
 <style>
 html, body { height: 100%; }
 
@@ -346,9 +346,8 @@ body.toy .joinqr { display: none; }
 /* Part 0 only: which room this group is in. The presenter says the number out
    loud and the audience taps it - no URL to read out, no QR to fail. */
 .roombox { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.roomno { font-family: var(--hand); font-size: clamp(40px, 7vw, 90px); line-height: 1; }
-.roomno strong { color: var(--accent); font-weight: inherit; }
-.joined { font-family: var(--hand); font-size: clamp(18px, 2vw, 26px); color: var(--chalk-dim); }
+.joined { font-family: var(--hand); font-size: clamp(22px, 2.8vw, 40px);
+          color: var(--chalk-dim); }
 
 /* The leaderboard. Names come from the audience, so they are written with
    textContent only - a name containing markup must never become markup. */
@@ -491,11 +490,6 @@ body.joining #animation { border: none; box-shadow: none; background: none; }
 body.joining #animation .what,
 body.joining #animation .note,
 body.joining #explanation { display: none; }
-body.joining .roomno { color: var(--ink-dark); }
-/* The number itself was still the blackboard accent - 2.2:1 on paper, which
-   is the one thing on this screen people have to read from a distance. */
-body.joining .roomno strong { color: var(--accent-ink); }
-body.joining .roombox .small { color: var(--ink-soft); }
 body.joining #joined { color: var(--ink-soft); }
 
 /* ---- The explanation is not a box at all -------------------------------
@@ -566,7 +560,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=13" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=14" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -584,10 +578,11 @@ body.joining #joined { color: var(--ink-soft); }
       <div class="cardbox" id="anim"></div>
       <div class="what" id="animationWhat">Animation</div>
       <div class="note" id="animationNote"></div>
+      <!-- The code is the instruction. Which group this is belongs to the
+           presenter, and the top bar already says it; the room does not need
+           to be told a number it cannot act on. What the room DOES want to
+           see is whether anyone has got in yet. -->
       <div class="roombox" id="roombox" hidden>
-        <div class="roomno">Group <strong id="roomno"></strong></div>
-        <p class="small">Scan the code. There is nothing to choose &mdash;
-        whoever joins lands in this group.</p>
         <div class="joined" id="joined"></div>
       </div>
     </div>
@@ -636,10 +631,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=13"></script>
-<script src="questions.js?v=13"></script>
-<script src="anim.js?v=13"></script>
-<script src="live.js?v=13"></script>
+<script src="physics.js?v=14"></script>
+<script src="questions.js?v=14"></script>
+<script src="anim.js?v=14"></script>
+<script src="live.js?v=14"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -1075,7 +1070,6 @@ function paintLive() {
   $('live').classList.toggle('on', on);
 
   $('roombox').hidden = part !== 0;
-  $('roomno').textContent = Live.session() === null ? '—' : Live.session();
   $('joined').textContent = !on ? 'not connected to the room'
     : joinedCount === 0 ? 'waiting for the first phone…'
     : joinedCount + (joinedCount === 1 ? ' person has joined' : ' people have joined');
