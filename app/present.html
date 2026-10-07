@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '7';
+const BUILD = '8';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=7">
+<link rel="stylesheet" href="theme.css?v=8">
 <style>
 html, body { height: 100%; }
 
@@ -98,6 +98,10 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 /* basis 0, not auto: with auto each box keeps its own content height first and
    the 2:1 split never happens. */
 #explanation.filled { flex: 1 1 0; min-height: 0; overflow: hidden; }
+
+/* Set by fitExplanation() when the words will not fit even at their smallest:
+   the picture gives up its extra share rather than the text being cut. */
+.parts.text-heavy #animation { flex: 1 1 0; }
 
 /* Everything in this box is sized in em against the box itself, so one number
    scales the whole slide. fitExplanation() turns that number down until the
@@ -228,16 +232,31 @@ body.asking .parts > .slot:not(#question) { display: none; }
 }
 
 /* ---- Part 9: hand over to the toy --------------------------------------- */
+/* Sized in em from one number, like the slide text, so the same shrink-to-fit
+   works here. This part carries the most: a leaderboard whose height depends
+   on how many people played, five lines of slide 5, and the button. */
 #endcard { display: none; flex-direction: column; align-items: center; justify-content: center;
-           gap: 18px; flex: 1 1 auto; text-align: center; }
-#endcard a.btn { font-size: 22px; padding: 16px 30px; text-decoration: none; }
+           gap: 1em; flex: 1 1 auto; min-height: 0; overflow: hidden; text-align: center;
+           font-size: calc(clamp(12px, 1.15vw, 16px) * var(--fit, 1)); }
+#endcard h2 { font-size: 2em; margin: 0; }
+.scorecol, .playcol { display: flex; flex-direction: column; align-items: center;
+                      gap: 1em; min-width: 0; }
+.scorecol { flex: 0 1 auto; }
+.playcol  { flex: 0 1 auto; }
+@media (min-width: 1100px) {
+  #endcard { flex-direction: row; align-items: center; justify-content: center;
+             gap: 3em; }
+  .playcol { max-width: 46ch; }
+}
+#endcard a.btn { font-size: 1.4em; padding: .8em 1.5em; text-decoration: none; }
+#endcard .small { font-size: .95em; }
 
 /* Slide 5, sitting between the scores and the door to the simulation. */
 .handover { max-width: 70ch; text-align: left; display: flex; flex-direction: column;
-            gap: 8px; }
-.handover .lead { font-size: clamp(18px, 2vw, 26px); }
-.handover .bullets li { font-size: clamp(14px, 1.4vw, 18px); }
-.handover .closing { font-size: clamp(15px, 1.6vw, 21px); margin: 4px 0 0; }
+            gap: .5em; }
+.handover .lead { font-size: 1.6em; }
+.handover .bullets li { font-size: 1.1em; }
+.handover .closing { font-size: 1.3em; margin: .25em 0 0; }
 .handover em { font-style: normal; color: var(--accent); }
 body.toy .parts { display: none; }
 body.toy #endcard { display: flex; }
@@ -276,12 +295,21 @@ body.toy .joinqr { display: none; }
 
 /* The leaderboard. Names come from the audience, so they are written with
    textContent only - a name containing markup must never become markup. */
+/* One column up to eight names. Beyond that it goes wide rather than tall,
+   because the end card runs out of height long before it runs out of width -
+   twenty names in one list is three hundred pixels off the bottom of a short
+   screen, at a size nobody could read anyway. Order still runs top-left
+   first, so the winner is still the first row. */
 .board { list-style: none; margin: 0; padding: 0; width: min(520px, 100%);
-         display: flex; flex-direction: column; gap: 8px; }
-.board li { display: flex; justify-content: space-between; gap: 18px;
-            font-family: var(--hand); font-size: clamp(18px, 2vw, 26px);
+         display: flex; flex-direction: column; gap: .4em; }
+.board.cols2 { display: grid; grid-template-columns: 1fr 1fr;
+               grid-auto-flow: column; width: min(960px, 100%); }
+.board.cols3 { display: grid; grid-template-columns: repeat(3, 1fr);
+               grid-auto-flow: column; width: min(1280px, 100%); }
+.board li { display: flex; justify-content: space-between; gap: 1em;
+            font-family: var(--hand); font-size: 1.5em;
             border: 1px solid var(--rule); border-radius: 10px;
-            padding: 10px 16px; background: var(--board-sunk); }
+            padding: .35em .6em; background: var(--board-sunk); }
 .board li:first-child { border-color: var(--emit); color: var(--emit); }
 </style>
 </head>
@@ -304,7 +332,7 @@ body.toy .joinqr { display: none; }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=7" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=8" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -341,10 +369,16 @@ body.toy .joinqr { display: none; }
   </div>
 
   <div id="endcard">
-    <h2>Scores</h2>
-    <ol class="board" id="board"></ol>
-    <p class="small" id="boardNote">Hold up your phone and compare.</p>
-    <p class="small" style="color:var(--chalk-faint)">points &middot; (number correct)</p>
+    <!-- Two columns on a wide screen: the scores on one side, the hand-over to
+         the toy on the other. Stacked, a full leaderboard plus slide 5 is
+         taller than a short projector. -->
+    <div class="scorecol">
+      <h2>Scores</h2>
+      <ol class="board" id="board"></ol>
+      <p class="small" id="boardNote">Hold up your phone and compare.</p>
+      <p class="small" style="color:var(--chalk-faint)">points &middot; (number correct)</p>
+    </div>
+    <div class="playcol">
 
     <!-- Slide 5. It lives here rather than in the slot above, because the
          slots are hidden on this part to make room for the scores. -->
@@ -363,13 +397,14 @@ body.toy .joinqr { display: none; }
     </div>
 
     <a class="btn" href="index.html">Open the simulation and play &rarr;</a>
+    </div>
   </div>
 </main>
 
-<script src="physics.js?v=7"></script>
-<script src="questions.js?v=7"></script>
-<script src="anim.js?v=7"></script>
-<script src="live.js?v=7"></script>
+<script src="physics.js?v=8"></script>
+<script src="questions.js?v=8"></script>
+<script src="anim.js?v=8"></script>
+<script src="live.js?v=8"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -592,13 +627,68 @@ function paintExplanation(p) {
    Bounded both ways: at most a dozen steps, and never below 0.62, because text
    too small to read from the back is no better than text that is cut off - if
    it bottoms out, the slide genuinely has too much on it. */
-function fitExplanation(box) {
+/* Turn the size down until it fits. Returns false if it ran out of room
+   before it fit - text too small to read from the back is not a fix. */
+function shrinkToFit(box) {
   let fit = 1;
-  box.style.setProperty('--fit', fit);
-  for (let i = 0; i < 12 && box.scrollHeight > box.clientHeight + 1; i++) {
+  box.style.setProperty('--fit', '1');
+  while (box.scrollHeight > box.clientHeight + 1) {
     fit -= 0.05;
-    if (fit < 0.62) break;
+    if (fit < 0.55) return false;
     box.style.setProperty('--fit', fit.toFixed(2));
+  }
+  return true;
+}
+
+/* Shrinking the words is the first move. If that is not enough - a short
+   screen, a dense slide - take the room from the PICTURE instead and try
+   again, because half a picture still teaches and half a sentence does not.
+   On a tall screen this never triggers and the picture keeps its 2:1 share. */
+function fitExplanation(box) {
+  const parts = box.parentNode;
+  parts.classList.remove('text-heavy');
+  if (shrinkToFit(box)) return;
+  parts.classList.add('text-heavy');
+  shrinkToFit(box);
+}
+
+/* Re-fit whenever anything that could change the answer changes.
+ *
+ * The first-load case is the one that bites: the handwriting face arrives as
+ * a separate request, so a fit computed before it lands was measured against
+ * the fallback. Schoolbell is wider than the fallback at the same size, so the
+ * text grows AFTER the fit and spills. It only shows on a cold cache, which is
+ * exactly the state every machine but the one it was developed on is in.
+ *
+ * A ResizeObserver covers the rest without having to enumerate it: window
+ * size, browser zoom, the projector being plugged in and changing the
+ * resolution, a phone rotating. Anything that resizes the box re-fits it. */
+function watchFit() {
+  const box = $('explanation');
+  const card = $('endcard');
+  const refit = () => {
+    if (box.classList.contains('filled')) fitExplanation(box);
+    if (document.body.classList.contains('toy')) shrinkToFit(card);
+  };
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+  if (window.ResizeObserver) {
+    /* Guarded: the re-fit changes the font size, which resizes the box, which
+       would call the observer again. */
+    /* Coalesced to one pass a frame rather than dropped. A re-fit resizes the
+       box, which fires the observer again - and that second pass is the one
+       that matters, because the first ran against the size the box was BEFORE
+       it settled. Dropping it was leaving the text a step too large. It
+       terminates because the box's height comes from flex, not from its
+       content, so the answer stops changing. */
+    let pending = false;
+    const ro = new ResizeObserver(() => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => { pending = false; refit(); });
+    });
+    ro.observe(box);
+    ro.observe(card);
   }
 }
 
@@ -615,6 +705,9 @@ function render() {
   paintExplanation(p);
 
   document.body.classList.toggle('toy', part === PARTS.length - 1);
+  /* The end card carries the most of any part and its height depends on how
+     many people played, so it is fitted like the slide text. */
+  if (part === PARTS.length - 1) shrinkToFit($('endcard'));
   document.body.classList.toggle('joining', part === 0);
   if (typeof paintLive === 'function') paintLive();
   $('prev').disabled = part === 0;
@@ -635,13 +728,6 @@ function goPart(delta) {
      question left open elsewhere is cleared. */
   Live.setPart(part);
 }
-
-/* The box changes size when the window does, and a fit computed for the old
-   size is just a guess about the new one. */
-window.addEventListener('resize', () => {
-  const box = $('explanation');
-  if (box.classList.contains('filled')) fitExplanation(box);
-});
 
 $('next').onclick = () => goPart(1);
 $('prev').onclick = () => goPart(-1);
@@ -711,6 +797,19 @@ function paintBoard(rows) {
     return;
   }
   $('boardNote').textContent = '';
+
+  /* Go wide before going tall. grid-auto-flow: column fills the first column
+     top to bottom before starting the second, so the winner stays top-left. */
+  board.className = 'board'
+    + (rows.length > 16 ? ' cols3' : rows.length > 8 ? ' cols2' : '');
+  board.style.gridTemplateRows =
+    rows.length > 8 ? 'repeat(' + Math.ceil(rows.length / (rows.length > 16 ? 3 : 2)) + ', auto)' : '';
+
+  /* Twelve names take more room than two. The board is painted from the
+     server, so this is the moment its height changes. */
+  if (document.body.classList.contains('toy')) {
+    requestAnimationFrame(() => shrinkToFit($('endcard')));
+  }
   rows.forEach(r => {
     const li = document.createElement('li');
     const name = document.createElement('span');
@@ -767,6 +866,7 @@ document.addEventListener('click', e => {
   if (arming2 && !$('newgroup').contains(e.target)) { clearTimeout(arming2); disarm2(); }
 }, true);
 
+watchFit();
 Live.start({ as: 'presenter' });
 
 render();
