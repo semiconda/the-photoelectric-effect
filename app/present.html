@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '14';
+const BUILD = '15';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=14">
+<link rel="stylesheet" href="theme.css?v=15">
 <style>
 html, body { height: 100%; }
 
@@ -560,7 +560,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=14" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=15" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -631,10 +631,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=14"></script>
-<script src="questions.js?v=14"></script>
-<script src="anim.js?v=14"></script>
-<script src="live.js?v=14"></script>
+<script src="physics.js?v=15"></script>
+<script src="questions.js?v=15"></script>
+<script src="anim.js?v=15"></script>
+<script src="live.js?v=15"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -658,15 +658,19 @@ const PARTS = [
   {
     title: 'What is light?',
     lead: 'Light behaves like a wave and transfers energy in packets called photons.',
-    /* "Shorter wavelength means more energy per photon" is the card title on
-       the board, the tightness of the two waves, and the arrow under the
-       spectrum. The frequency line stays: frequency is the one thing down
-       there that is NOT drawn. */
+    /* One line rather than two: the board already shows shorter wavelength
+       meaning more energy, in the card title, the tightness of the waves and
+       the arrow under the spectrum. What it does not show is that frequency
+       is the same statement, so the two are named together here.
+
+       Wavelength leads, here and in the formula. It is the quantity on the
+       spectrum, on every lane label and on the toy's slider - frequency is
+       never on screen as a number anywhere in this talk. */
     groups: [{ items: [
       'Each photon carries energy.',
-      'Higher frequency means more energy per photon.'
+      'Shorter wavelength / higher frequency means more energy per photon.'
     ] }],
-    formula: 'E = hf = hc/λ'
+    formula: 'E = hc/λ = hf'
     /* The closing line was "Different colors. Different photon energies."
        The spectrum says that in colour, with the numbers. */
   },
