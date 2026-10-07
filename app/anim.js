@@ -48,8 +48,9 @@
  * in the toy at the end. The toy is a different page with its own palette; the
  * numbers, which are what the quiz is scored on, come from physics.js in both.
  */
-function spectralColor(w) {
-  if (w < 380) return '#a98cff';          /* ultraviolet, by convention */
+function spectralColor(w, lift) {
+  if (lift == null) lift = 0.22;
+  if (w < 380) return lift > 0.3 ? '#c4affd' : '#a98cff';  /* ultraviolet, by convention */
   if (w > 780) return '#8d2b20';
   let r = 0, g = 0, b = 0;
   if (w < 440)      { r = -(w - 440) / 60; b = 1; }
@@ -59,12 +60,19 @@ function spectralColor(w) {
   else if (w < 645) { r = 1; g = -(w - 645) / 65; }
   else              { r = 1; }
   /* Lift toward white so every part of the spectrum reads on a dark board. */
-  const lift = c => Math.round(255 * (c + (1 - c) * 0.22));
-  return 'rgb(' + lift(r) + ',' + lift(g) + ',' + lift(b) + ')';
+  const up = c => Math.round(255 * (c + (1 - c) * lift));
+  return 'rgb(' + up(r) + ',' + up(g) + ',' + up(b) + ')';
 }
 
 /* The name the rest of this file calls it by. */
 const lightColor = spectralColor;
+
+/* The same colour, lifted further, for text.
+   A 2.4px violet stroke at 400 nm is perfectly visible on the slate; the words
+   "400 nm" in that same violet measure 4.08:1 against it, which is under the
+   4.5 a projector in a lit room needs. Lines and letters do not have the same
+   requirements, so they do not get the same colour. */
+function labelColor(w) { return spectralColor(w, 0.45); }
 
 /* The lane geometry, shared by every drawing so the plates line up down the
    card however many lanes it has. */
@@ -131,7 +139,7 @@ function buildLane(spec) {
   name.className = 'lane-name';
   const strong = document.createElement('strong');
   strong.textContent = spec.label;
-  strong.style.color = colour;
+  strong.style.color = labelColor(spec.wavelength);
   const span = document.createElement('span');
   span.textContent = spec.sub || '';
   name.appendChild(strong);

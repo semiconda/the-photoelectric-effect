@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '9';
+const BUILD = '10';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=9">
+<link rel="stylesheet" href="theme.css?v=10">
 <style>
 html, body { height: 100%; }
 
@@ -356,6 +356,9 @@ body.toy .joinqr { display: none; }
   --paper-marg:  #e09a9a;   /* the margin rule  */
   --paper-edge:  #d6d2c6;
 
+  --slate:       #16211d;   /* the blackboard itself */
+  --frame:       #7d5c39;   /* its wooden frame      */
+
   --ink-dark:    #1b1d1f;
   --ink-soft:    #4c535a;
   --ink-faint:   #828a92;
@@ -372,9 +375,71 @@ body {
   color: var(--ink-dark);
 }
 
-/* ---- The dark boxes, now self-contained ---- */
-.slot { background: var(--board); color: var(--chalk); }
-#question { background: var(--board); }
+/* ---- The blackboard ----------------------------------------------------
+   The dark panel stays dark because the physics needs it to - beams and
+   electrons only read against a dark ground - but it stops being a black
+   rectangle dropped on a notebook and becomes a blackboard pinned to the
+   page: slate, a wooden frame, and a shadow to lift it off the paper.
+
+   The frame is a border rather than an outer element, so nothing inside has
+   to know about it and the fitting maths is unchanged. */
+.slot {
+  background: var(--slate);
+  color: var(--chalk);
+  border: 9px solid var(--frame);
+  border-radius: 7px;
+  box-shadow: 0 10px 20px rgba(60, 45, 25, .22),
+              inset 0 0 70px rgba(0, 0, 0, .34),
+              inset 0 1px 0 rgba(255, 255, 255, .05);
+  /* Chalk dust, the same two gradients the board theme used. */
+  background-image:
+    radial-gradient(ellipse 80% 50% at 22% 18%, rgba(240,239,230,.030), transparent 70%),
+    radial-gradient(ellipse 70% 60% at 78% 82%, rgba(240,239,230,.022), transparent 65%);
+}
+/* An empty slot is still a promise, not a blackboard - and its label has to
+   be readable as ink, since it is now sitting on paper. */
+/* .takeover, not #question: an id inside :not() counts as an id, and this
+   selector was quietly outranking every rule that tried to turn a slot off -
+   which is how the join screen kept its dashed box. */
+.slot:not(.drawn):not(.filled):not(.takeover) {
+  background: none; box-shadow: none; border: 2px dashed var(--paper-edge);
+  color: var(--ink-soft);
+}
+.slot:not(.drawn):not(.filled):not(.takeover) .what,
+.slot:not(.drawn):not(.filled):not(.takeover) .note { color: var(--ink-soft); }
+
+/* ---- The join screen ----------------------------------------------------
+   Nothing is being explained yet, so there is nothing to put on a blackboard
+   and nothing to write underneath it. The group number and the code to scan
+   sit on the bare sheet. Two empty dashed boxes would just look unfinished -
+   and "Animation - to be built" is a note to whoever is building this, which
+   has no business on a projector. */
+body.joining #animation { border: none; box-shadow: none; background: none; }
+body.joining #animation .what,
+body.joining #animation .note,
+body.joining #explanation { display: none; }
+body.joining .roomno { color: var(--ink-dark); }
+/* The number itself was still the blackboard accent - 2.2:1 on paper, which
+   is the one thing on this screen people have to read from a distance. */
+body.joining .roomno strong { color: var(--accent-ink); }
+body.joining .roombox .small { color: var(--ink-soft); }
+body.joining #joined { color: var(--ink-soft); }
+
+/* ---- The explanation is not a box at all -------------------------------
+   It is text, and on a school sheet text belongs ON the paper, in ink, with
+   nothing drawn around it. That is what a notebook page looks like - and it
+   leaves exactly one dark panel on the page, which is the blackboard. */
+#explanation, #explanation.filled, #explanation.slot {
+  background: none; border: none; box-shadow: none;
+  color: var(--ink-dark); padding: 2px 4px 0;
+}
+#explanation .lead,
+#explanation .closing   { color: var(--ink-dark); }
+#explanation .bullets li,
+#explanation .example .row { color: var(--ink-soft); }
+#explanation .example .cap { color: var(--ink-soft); }
+#explanation .grouphead,
+#explanation .formula   { color: var(--accent-ink); }
 
 /* ---- Ink on paper: everything outside the boxes ---- */
 .topbar { background: rgba(255,255,255,.78); border-bottom: 1.5px solid var(--paper-edge); }
@@ -428,7 +493,7 @@ body {
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=9" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=10" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -451,7 +516,7 @@ body {
       </div>
     </div>
 
-    <div class="slot" id="question">
+    <div class="slot takeover" id="question">
       <div class="qtag" id="qtag"></div>
       <div class="what" id="qwhat"></div>
       <div class="note">The audience answers on their phones.</div>
@@ -497,10 +562,10 @@ body {
   </div>
 </main>
 
-<script src="physics.js?v=9"></script>
-<script src="questions.js?v=9"></script>
-<script src="anim.js?v=9"></script>
-<script src="live.js?v=9"></script>
+<script src="physics.js?v=10"></script>
+<script src="questions.js?v=10"></script>
+<script src="anim.js?v=10"></script>
+<script src="live.js?v=10"></script>
 <script>
 const $ = id => document.getElementById(id);
 
