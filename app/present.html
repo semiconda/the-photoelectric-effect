@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '11';
+const BUILD = '12';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=11">
+<link rel="stylesheet" href="theme.css?v=12">
 <style>
 html, body { height: 100%; }
 
@@ -533,7 +533,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=11" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=12" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -544,6 +544,9 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 
   <div class="parts">
+    <!-- Painted from PARTS by paintExplanation(); empty for a part that has
+         no written content yet. -->
+    <div class="slot" id="explanation"></div>
     <div class="slot" id="animation">
       <div class="cardbox" id="anim"></div>
       <div class="what" id="animationWhat">Animation</div>
@@ -564,9 +567,7 @@ body.joining #joined { color: var(--ink-soft); }
       <div class="why" id="qwhy" hidden></div>
     </div>
 
-    <!-- Painted from PARTS by paintExplanation(); empty for a part that has
-         no written content yet. -->
-    <div class="slot" id="explanation"></div>
+
   </div>
 
   <div id="endcard">
@@ -602,10 +603,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=11"></script>
-<script src="questions.js?v=11"></script>
-<script src="anim.js?v=11"></script>
-<script src="live.js?v=11"></script>
+<script src="physics.js?v=12"></script>
+<script src="questions.js?v=12"></script>
+<script src="anim.js?v=12"></script>
+<script src="live.js?v=12"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -658,12 +659,9 @@ const PARTS = [
       'Below the threshold: no electrons escape.',
       'Above the threshold: electrons escape.',
       'Higher photon energy above the threshold: higher maximum electron speed.'
-    ] }],
-    example: { cap: 'Example: sodium', rows: [
-      '700 nm — red light: no emission.',
-      '400 nm — violet light: electrons escape.',
-      '300 nm — ultraviolet light: higher maximum electron kinetic energy.'
-    ] }
+    ] }]
+    /* The worked example that used to sit here - 700, 400 and 300 nm on
+       sodium - is the blackboard below it, lane for lane. */
   },
 
   {
