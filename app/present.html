@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '8';
+const BUILD = '9';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=8">
+<link rel="stylesheet" href="theme.css?v=9">
 <style>
 html, body { height: 100%; }
 
@@ -145,8 +145,11 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
          align-items: stretch; justify-content: center; }
 .card { flex: 1 1 0; min-width: 0; max-width: 760px; text-align: left;
         display: flex; flex-direction: column; min-height: 0; }
-/* A card holding two things side by side needs the whole stage, not half. */
+/* A card holding two things side by side needs the whole stage, not half -
+   and so does the only card on a slide, rather than sitting in the middle
+   with the box empty on both sides. */
 .card.wide { max-width: 1340px; }
+.cards.one .card { max-width: 1240px; }
 .card h3 { flex: none; font-family: var(--hand); font-weight: 400;
            font-size: clamp(17px, 1.9vw, 25px); color: var(--chalk); margin: 0 0 2px; }
 .card .held { flex: none; font-size: clamp(12px, 1.1vw, 15px);
@@ -162,21 +165,42 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .sp-unit { fill: var(--chalk-dim); font-family: var(--ink); font-size: 13px; }
 .sp-dir  { fill: var(--chalk-dim); font-family: var(--ink); font-size: 14px; }
 
-.lane { border-top: 1px solid var(--rule-soft); padding-top: 4px; margin-top: 4px;
-         flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
-.lane-title { flex: none; display: flex; align-items: baseline;
-              justify-content: space-between; gap: 10px;
-              font-size: clamp(12px, 1.2vw, 16px); }
-.lane-title strong { font-weight: 600; }
-.lane-title span { color: var(--chalk-dim); font-size: .88em;
-                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A lane reads left to right: which light this is, then what it does.
+   The rule goes BETWEEN lanes and nowhere else - a line above the first one
+   is not separating two colours from each other, it is just a line, and that
+   is what made the separators look arbitrary. */
+.lane { flex: 1 1 0; min-height: 0; display: flex; align-items: center;
+        gap: 1.1em; padding: .3em 0; }
+.lane + .lane { border-top: 1px solid var(--rule-soft); }
+
+/* Fixed width so every drawing in a card starts at the same x. Lanes are only
+   worth putting under each other if they can be compared at a glance. */
+.lane-head { flex: 0 0 auto; width: clamp(6.5em, 24%, 11em);
+             display: flex; flex-direction: column; gap: .1em;
+             font-size: clamp(12px, 1.15vw, 16px); }
+.lane-name { display: flex; align-items: baseline; gap: .45em; min-width: 0; }
+.lane-name strong { font-weight: 600; white-space: nowrap; }
+.lane-name span { color: var(--chalk-dim); font-size: .88em;
+                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane-result { white-space: nowrap; font-size: 1.05em; color: var(--emit); }
+.lane-result.none { color: var(--no-emit); }
+
 /* meet, not slice: the drawing shrinks to the room it is given and is never
    cropped, however short the slot gets. */
-.lane svg { display: block; width: 100%; height: 100%; flex: 1 1 auto;
-            min-height: 58px; overflow: visible; }
-.lane-result { margin-left: auto; text-align: right; white-space: nowrap;
-               font-size: clamp(13px, 1.3vw, 17px); color: var(--emit); }
-.lane-result.none { color: var(--no-emit); }
+.lane svg { display: block; flex: 1 1 auto; min-width: 0;
+            width: 100%; height: 100%; min-height: 46px; overflow: visible; }
+
+/* Narrow enough that a label column would leave no room to draw in - a phone
+   held upright, or the page opened on a laptop beside something else. The
+   lane stacks, and the label spreads onto one line so it costs one row
+   instead of two. */
+@media (max-width: 820px) {
+  .lane { flex-direction: column; align-items: stretch; gap: .2em; }
+  .lane-head { width: auto; flex-direction: row; align-items: baseline;
+               justify-content: space-between; gap: .8em; }
+  .cardrow { flex-direction: column; }
+  .cards { flex-direction: column; }
+}
 
 .takeaway { display: block; flex: none; font-family: var(--hand);
             font-size: clamp(15px, 1.6vw, 21px); color: var(--accent);
@@ -311,6 +335,78 @@ body.toy .joinqr { display: none; }
             border: 1px solid var(--rule); border-radius: 10px;
             padding: .35em .6em; background: var(--board-sunk); }
 .board li:first-child { border-color: var(--emit); color: var(--emit); }
+
+/* ===== The school sheet =================================================
+   The page is a sheet of ruled paper; the animation and the explanation stay
+   dark boxes on top of it, because glowing photons and flying electrons only
+   read against a dark ground. That contrast is the point: the two boxes are
+   where the physics happens, and they now look like it.
+
+   Everything OUTSIDE those boxes is ink on paper - the title, the top bar,
+   the scores. The dark-on-dark colours from theme.css would be invisible
+   there, so each one has a paper counterpart below.
+
+   The boxes were only dark because the PAGE was. They now carry their own
+   background and their own text colour, so nothing inside them changes. */
+:root {
+  color-scheme: light;
+
+  --paper:       #fcf9f1;
+  --paper-rule:  #bdd0e6;   /* the ruled lines  */
+  --paper-marg:  #e09a9a;   /* the margin rule  */
+  --paper-edge:  #d6d2c6;
+
+  --ink-dark:    #1b1d1f;
+  --ink-soft:    #4c535a;
+  --ink-faint:   #828a92;
+  --accent-ink:  #5a3fd0;   /* --accent is for the dark boxes; this is its
+                               paper twin, dark enough to read on white */
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(to right, transparent 0 74px, var(--paper-marg) 74px 76px, transparent 76px),
+    repeating-linear-gradient(to bottom, transparent 0 33px, var(--paper-rule) 33px 34px);
+  background-attachment: fixed;
+  color: var(--ink-dark);
+}
+
+/* ---- The dark boxes, now self-contained ---- */
+.slot { background: var(--board); color: var(--chalk); }
+#question { background: var(--board); }
+
+/* ---- Ink on paper: everything outside the boxes ---- */
+.topbar { background: rgba(255,255,255,.78); border-bottom: 1.5px solid var(--paper-edge); }
+.topbar button { color: var(--ink-dark); background: #fff; border-color: #c8cbd0; }
+.topbar button:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
+.topbar button[disabled] { opacity: .4; }
+.topbar .sep { background: var(--paper-edge); }
+.topbar .where { color: var(--ink-soft); }
+.topbar .live { color: #8a5f10; border-color: #ddc394; background: #fff8e9; }
+.topbar .live.on { color: #0f7357; border-color: #9ed3c2; background: #eff9f5; }
+.qlabel { color: var(--ink-soft); }
+.qbtn.open { border-color: var(--accent-ink); color: var(--accent-ink); background: #f1eeff; }
+#resetroom.arming, #newgroup.arming { border-color: #b3401f; color: #b3401f; background: #fff1ec; }
+
+/* Both of these were measured against the paper and came back under 4.5:1.
+   On a projector in a lit room that is the difference between dim and gone. */
+.partno { color: var(--ink-soft); }
+#endcard .legend { color: var(--ink-soft); }
+.head h1 { color: var(--ink-dark); }
+.joinqr span { color: var(--ink-dark); }
+
+/* ---- The end card sits on the paper, not in a box ---- */
+#endcard h2 { color: var(--ink-dark); }
+#endcard .small { color: var(--ink-soft); }
+#endcard a.btn { color: var(--ink-dark); background: #fff; border-color: #c8cbd0; }
+#endcard a.btn:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
+.board li { background: #fff; border-color: var(--paper-edge); color: var(--ink-dark); }
+.board li:first-child { border-color: #0f7357; color: #0f7357; background: #f1faf6; }
+.handover .lead, .handover .closing { color: var(--ink-dark); }
+.handover .bullets li { color: var(--ink-soft); }
+.handover strong { color: var(--ink-dark); }
+.handover em { color: var(--accent-ink); }
 </style>
 </head>
 <body>
@@ -332,7 +428,7 @@ body.toy .joinqr { display: none; }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=8" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=9" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -376,7 +472,7 @@ body.toy .joinqr { display: none; }
       <h2>Scores</h2>
       <ol class="board" id="board"></ol>
       <p class="small" id="boardNote">Hold up your phone and compare.</p>
-      <p class="small" style="color:var(--chalk-faint)">points &middot; (number correct)</p>
+      <p class="small legend">points &middot; (number correct)</p>
     </div>
     <div class="playcol">
 
@@ -401,10 +497,10 @@ body.toy .joinqr { display: none; }
   </div>
 </main>
 
-<script src="physics.js?v=8"></script>
-<script src="questions.js?v=8"></script>
-<script src="anim.js?v=8"></script>
-<script src="live.js?v=8"></script>
+<script src="physics.js?v=9"></script>
+<script src="questions.js?v=9"></script>
+<script src="anim.js?v=9"></script>
+<script src="live.js?v=9"></script>
 <script>
 const $ = id => document.getElementById(id);
 

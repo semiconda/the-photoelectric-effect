@@ -120,23 +120,29 @@ function buildLane(spec) {
   const lane = document.createElement('div');
   lane.className = 'lane';
 
+  /* The lane reads left to right, the way the physics does: which light this
+     is, then what that light does. The label block is fixed-width so the
+     drawings line up down the card and can be compared at a glance - the
+     comparison is the whole point of a card. */
   const head = document.createElement('div');
-  head.className = 'lane-title';
+  head.className = 'lane-head';
+
+  const name = document.createElement('div');
+  name.className = 'lane-name';
   const strong = document.createElement('strong');
   strong.textContent = spec.label;
   strong.style.color = colour;
   const span = document.createElement('span');
   span.textContent = spec.sub || '';
-  head.appendChild(strong);
-  head.appendChild(span);
-  lane.appendChild(head);
+  name.appendChild(strong);
+  name.appendChild(span);
+  head.appendChild(name);
 
-  /* The result shares the title's line rather than taking one of its own.
-     Vertical space is what a projector runs out of first, and this is the row
-     the eye compares between lanes anyway. */
   const result = document.createElement('div');
   result.className = 'lane-result';
   head.appendChild(result);
+
+  lane.appendChild(head);
 
   const svg = svgEl('svg', {
     viewBox: '0 0 ' + LANE.w + ' ' + LANE.h,
@@ -408,9 +414,10 @@ function paintAnimationInto(box, part) {
   while (box.firstChild) box.removeChild(box.firstChild);
   const cards = ANIMATIONS(part);
   if (!cards) return false;
-  box.appendChild(
-    cards.reduce((grid, c) => (grid.appendChild(buildCard(c)), grid),
-                 Object.assign(document.createElement('div'), { className: 'cards' }))
-  );
+  /* One card has the whole stage to itself; two share it. */
+  const grid = document.createElement('div');
+  grid.className = 'cards' + (cards.length === 1 ? ' one' : '');
+  cards.forEach(c => grid.appendChild(buildCard(c)));
+  box.appendChild(grid);
   return true;
 }
