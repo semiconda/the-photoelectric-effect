@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '12';
+const BUILD = '13';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=12">
+<link rel="stylesheet" href="theme.css?v=13">
 <style>
 html, body { height: 100%; }
 
@@ -115,12 +115,43 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .grouphead { font-family: var(--hand); font-size: 1.25em; color: var(--accent); }
 .groupcols { display: flex; gap: 2.2em; width: 100%; }
 .groupcol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: .25em; }
+/* ---- The slide: words left, formula right -------------------------------
+   The band between the title and the blackboard is wide and short. Running
+   the slide down the middle of it wastes the width and spends the height the
+   board needs, so the two things share the row. */
+.exp-row { display: flex; width: 100%; height: 100%; min-height: 0;
+           gap: clamp(18px, 2.4vw, 56px); align-items: stretch; }
+.exp-main { flex: 1.45 1 0; min-width: 0; display: flex; flex-direction: column;
+            gap: .45em; }
+.exp-main.wide { flex: 1 1 100%; }
+
+/* Centred in the band, not pinned to the top of it - this is the one thing on
+   the slide the eye should land on. */
+.exp-aside { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+             justify-content: center; align-items: center; gap: .55em; }
+
+.formula-wrap { position: relative; display: inline-block;
+                padding: .55em 1.3em .6em; }
+.formula-wrap .ring { position: absolute; inset: 0; width: 100%; height: 100%;
+                      overflow: visible; pointer-events: none; }
+.formula-wrap .ring path {
+  stroke: var(--accent-ink); stroke-width: 2.2; stroke-linecap: round;
+  /* The ring stretches to whatever the formula measures; this keeps the line
+     an even weight while it does, instead of an oval that is thick at the
+     sides and thin top and bottom. */
+  vector-effect: non-scaling-stroke;
+  opacity: .9;
+}
 .formula { font-family: var(--hand); font-size: 1.9em;
-           color: var(--accent); align-self: center; }
+           color: var(--ink-dark); text-align: center; white-space: nowrap; }
+.formula-note { font-size: .95em; color: var(--ink-soft); text-align: center;
+                max-width: 30ch; }
 .example { display: flex; flex-direction: column; gap: .2em; }
 .example .cap { font-size: .8em; color: var(--chalk-faint); }
 .example .row { font-size: 1em; color: var(--chalk-dim); }
 .closing { font-family: var(--hand); font-size: 1.2em; color: var(--chalk); }
+/* The formula is ink now; the ring is what marks it, not the colour. */
+#explanation .formula { color: var(--ink-dark); }
 
 /* The feedback for a question, on screen only once it has been revealed. */
 .why { font-size: clamp(15px, 1.6vw, 21px); color: var(--chalk-dim);
@@ -178,10 +209,12 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .lane-head { flex: 0 0 auto; width: clamp(6.5em, 24%, 11em);
              display: flex; flex-direction: column; gap: .1em;
              font-size: clamp(12px, 1.15vw, 16px); }
-.lane-name { display: flex; align-items: baseline; gap: .45em; min-width: 0; }
+/* Wraps rather than clips. "Below the work function" is the whole point of
+   that lane, and an ellipsis in the middle of it says nothing at all. */
+.lane-name { display: flex; align-items: baseline; gap: .45em; min-width: 0;
+             flex-wrap: wrap; }
 .lane-name strong { font-weight: 600; white-space: nowrap; }
-.lane-name span { color: var(--chalk-dim); font-size: .88em;
-                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane-name span { color: var(--chalk-dim); font-size: .88em; }
 .lane-result { white-space: nowrap; font-size: 1.05em; color: var(--emit); }
 .lane-result.none { color: var(--no-emit); }
 
@@ -533,7 +566,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=12" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=13" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -603,10 +636,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=12"></script>
-<script src="questions.js?v=12"></script>
-<script src="anim.js?v=12"></script>
-<script src="live.js?v=12"></script>
+<script src="physics.js?v=13"></script>
+<script src="questions.js?v=13"></script>
+<script src="anim.js?v=13"></script>
+<script src="live.js?v=13"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -630,13 +663,17 @@ const PARTS = [
   {
     title: 'What is light?',
     lead: 'Light behaves like a wave and transfers energy in packets called photons.',
+    /* "Shorter wavelength means more energy per photon" is the card title on
+       the board, the tightness of the two waves, and the arrow under the
+       spectrum. The frequency line stays: frequency is the one thing down
+       there that is NOT drawn. */
     groups: [{ items: [
       'Each photon carries energy.',
-      'Higher frequency means more energy per photon.',
-      'Shorter wavelength means more energy per photon.'
+      'Higher frequency means more energy per photon.'
     ] }],
-    formula: 'E = hf = hc/λ',
-    closing: 'Different colors. Different photon energies.'
+    formula: 'E = hf = hc/λ'
+    /* The closing line was "Different colors. Different photon energies."
+       The spectrum says that in colour, with the numbers. */
   },
 
   {
@@ -645,7 +682,8 @@ const PARTS = [
     groups: [{ items: [
       'Electrons need energy to escape from a metal.',
       'The minimum required energy is called the work function (φ).',
-      'When a photon provides more than this energy, an electron can escape.',
+      /* "When a photon provides more than this energy, an electron can
+         escape" is the two lanes below, side by side. */
       'The remaining energy determines its maximum kinetic energy.'
     ] }],
     formula: 'Kₘₐₓ = hf − φ',
@@ -656,9 +694,13 @@ const PARTS = [
     title: 'Change the color. Change the result.',
     lead: 'Shorter wavelength → higher photon energy.',
     groups: [{ items: [
+      /* These two stay: they are where the word "threshold" is introduced,
+         and the board never writes it. */
       'Below the threshold: no electrons escape.',
-      'Above the threshold: electrons escape.',
-      'Higher photon energy above the threshold: higher maximum electron speed.'
+      'Above the threshold: electrons escape.'
+      /* "Higher photon energy above the threshold: higher maximum electron
+         speed" was the third. It is the takeaway under the board, and the
+         two Kmax values, and the visibly faster dots. */
     ] }]
     /* The worked example that used to sit here - 700, 400 and 300 nm on
        sodium - is the blackboard below it, lane for lane. */
@@ -668,21 +710,25 @@ const PARTS = [
     title: 'More light? A different metal?',
     groups: [
       { head: 'Change the intensity:', items: [
+        /* The mechanism, which the board cannot draw - you see more dots, not
+           more photons arriving. */
         'At a fixed wavelength, brighter light delivers more photons per second.',
-        'Above the threshold, more electrons escape.',
-        'Their maximum kinetic energy stays the same.',
+        /* "Above the threshold, more electrons escape" and "their maximum
+           kinetic energy stays the same" were here. That pair is the left
+           card's takeaway, word for word: "More electrons. Same speed." */
+        /* The caveat stays: the board shows 400 nm twice, never dim red, so
+           this is the one case it does not cover. */
         'Below the threshold, increasing intensity does not cause emission in the single-photon model.'
       ] },
       { head: 'Change the material:', items: [
         'Different metals have different work functions.',
-        'A lower work function makes electron emission easier.',
-        'The same light may work on one metal but not another.'
+        'A lower work function makes electron emission easier.'
+        /* "The same light may work on one metal but not another" is the right
+           card: same beam, copper blocked, sodium emitting. */
       ] }
-    ],
-    example: { cap: 'Same light at 400 nm', rows: [
-      'Sodium → emission',
-      'Copper → no emission'
-    ] }
+    ]
+    /* The worked example - "Same light at 400 nm / Sodium -> emission /
+       Copper -> no emission" - was that same right card in words. */
   },
 
   /* Slide 5's text is in the end card, not here: the slots are hidden on this
@@ -778,7 +824,13 @@ function el(tag, cls, text) {
 }
 
 /* Draw whatever this part has written for it. A part with nothing written
-   stays an empty slot rather than pretending to be finished. */
+   stays an empty slot rather than pretending to be finished.
+
+   The page is wide and the space above the blackboard is short, so the slide
+   does not run down the middle of it: the words take the left, the formula
+   takes the right, and the formula sits centred in that band. Stacking them
+   would spend height the blackboard needs and leave two thirds of the sheet
+   blank. */
 function paintExplanation(p) {
   const box = $('explanation');
   while (box.firstChild) box.removeChild(box.firstChild);
@@ -787,14 +839,17 @@ function paintExplanation(p) {
   box.classList.toggle('filled', filled);
   if (!filled) return;
 
-  if (p.lead) box.appendChild(el('div', 'lead', p.lead));
+  const row  = el('div', 'exp-row');
+  const main = el('div', 'exp-main');
+
+  if (p.lead) main.appendChild(el('div', 'lead', p.lead));
 
   /* Two headed groups sit side by side rather than stacking. A slide that
      compares two things reads better as two columns, and stacking them is what
      pushes a part like "more light? a different metal?" off the bottom. */
   const groups = p.groups || [];
   const columns = groups.length > 1 && groups.every(g => g.head);
-  const host = columns ? el('div', 'groupcols') : box;
+  const host = columns ? el('div', 'groupcols') : main;
   groups.forEach(g => {
     const col = columns ? el('div', 'groupcol') : host;
     if (g.head) col.appendChild(el('div', 'grouphead', g.head));
@@ -803,31 +858,75 @@ function paintExplanation(p) {
     col.appendChild(ul);
     if (columns) host.appendChild(col);
   });
-  if (columns) box.appendChild(host);
-
-  if (p.formula) box.appendChild(el('div', 'formula', p.formula));
+  if (columns) main.appendChild(host);
 
   if (p.example) {
     const wrap = el('div', 'example');
     wrap.appendChild(el('div', 'cap', p.example.cap));
     p.example.rows.forEach(t => wrap.appendChild(el('div', 'row', t)));
-    box.appendChild(wrap);
+    main.appendChild(wrap);
   }
 
-  if (p.closing) box.appendChild(el('div', 'closing', p.closing));
+  row.appendChild(main);
 
+  /* The formula, and whatever one line restates it in words, go to the right.
+     Nothing else belongs there. */
+  if (p.formula || p.closing) {
+    const aside = el('div', 'exp-aside');
+    if (p.formula) aside.appendChild(circledFormula(p.formula));
+    if (p.closing) aside.appendChild(el('div', 'formula-note', p.closing));
+    row.appendChild(aside);
+  } else {
+    main.classList.add('wide');
+  }
+
+  box.appendChild(row);
   fitExplanation(box);
+}
+
+/* The formula with a ring drawn round it by hand.
+ *
+ * Not an ellipse element: a perfect ellipse is the one shape nobody has ever
+ * drawn round anything in a notebook. This is a single stroke that wobbles,
+ * overshoots on the way round and stops short of where it started, leaving a
+ * gap at the top - which is what a ring drawn in one go actually looks like.
+ *
+ * The path stretches to whatever the formula measures, in any language or at
+ * any font size, because the SVG has no fixed size and preserveAspectRatio is
+ * off. vector-effect keeps the stroke an even weight while that happens -
+ * without it, a wide formula would be ringed by an oval of varying thickness.
+ */
+function circledFormula(text) {
+  const wrap = el('div', 'formula-wrap');
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 200 100');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('class', 'ring');
+  svg.setAttribute('aria-hidden', 'true');
+
+  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  ring.setAttribute('d', [
+    'M 58 7',                            /* start a third of the way along the top */
+    'C 24 11, 5 34, 6 57',               /* down the left, pulling slightly wide   */
+    'C 7 82, 56 96, 108 94',             /* along the bottom                       */
+    'C 161 92, 196 75, 194 47',          /* up the right                           */
+    'C 192 21, 141 5, 92 7'              /* back along the top, stopping short     */
+  ].join(' '));
+  ring.setAttribute('fill', 'none');
+  svg.appendChild(ring);
+
+  wrap.appendChild(svg);
+  wrap.appendChild(el('div', 'formula', text));
+  return wrap;
 }
 
 /* Turn the slide's one font-size number down until the text fits the box.
    Nothing on a projector should ever be half a line short of readable, and
    nobody should have to remember this when rewriting a slide.
 
-   Bounded both ways: at most a dozen steps, and never below 0.62, because text
-   too small to read from the back is no better than text that is cut off - if
-   it bottoms out, the slide genuinely has too much on it. */
-/* Turn the size down until it fits. Returns false if it ran out of room
-   before it fit - text too small to read from the back is not a fix. */
+   Returns false if it ran out of room before it fit - text too small to read
+   from the back is not a fix either. */
 function shrinkToFit(box) {
   let fit = 1;
   box.style.setProperty('--fit', '1');
@@ -872,8 +971,6 @@ function watchFit() {
 
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
   if (window.ResizeObserver) {
-    /* Guarded: the re-fit changes the font size, which resizes the box, which
-       would call the observer again. */
     /* Coalesced to one pass a frame rather than dropped. A re-fit resizes the
        box, which fires the observer again - and that second pass is the one
        that matters, because the first ran against the size the box was BEFORE
