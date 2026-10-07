@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '10';
+const BUILD = '11';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=10">
+<link rel="stylesheet" href="theme.css?v=11">
 <style>
 html, body { height: 100%; }
 
@@ -359,6 +359,19 @@ body.toy .joinqr { display: none; }
   --slate:       #16211d;   /* the blackboard itself */
   --frame:       #7d5c39;   /* its wooden frame      */
 
+  /* ---- Where the margin is -----------------------------------------------
+     ONE number. It draws the red rule in the background, it sets where the
+     stage starts, and the slide number hangs off it. Nothing else may put a
+     pixel value in any of those three places, because the moment two of them
+     disagree the margin stops being a margin.
+
+     It scales with the viewport rather than being fixed, so the proportion
+     survives a 13" laptop, a 1080p projector and a 4K screen alike - which
+     matters because the presenter does not know in advance which one is
+     going to be in the room. */
+  --margin-x:   clamp(42px, 4.4vw, 104px);   /* line position from the left */
+  --margin-gap: clamp(12px, 1.3vw, 28px);    /* air between line and content */
+
   --ink-dark:    #1b1d1f;
   --ink-soft:    #4c535a;
   --ink-faint:   #828a92;
@@ -369,10 +382,37 @@ body.toy .joinqr { display: none; }
 body {
   background-color: var(--paper);
   background-image:
-    linear-gradient(to right, transparent 0 74px, var(--paper-marg) 74px 76px, transparent 76px),
+    linear-gradient(to right,
+      transparent 0 var(--margin-x),
+      var(--paper-marg) var(--margin-x) calc(var(--margin-x) + 2px),
+      transparent calc(var(--margin-x) + 2px)),
     repeating-linear-gradient(to bottom, transparent 0 33px, var(--paper-rule) 33px 34px);
   background-attachment: fixed;
   color: var(--ink-dark);
+}
+
+/* ---- Everything lines up on the margin ---------------------------------
+   The stage starts where the margin says, so the blackboard's left edge, the
+   title and every line of text share one edge - the same edge the red rule is
+   drawn at. Derived, not measured.
+
+   max-width and the auto margins go: a centred 1500px column would start
+   wherever the viewport happened to put it, which on a wide screen is nowhere
+   near the margin. The sheet is the whole screen now. */
+.stage {
+  max-width: none; margin: 0;
+  padding-left: calc(var(--margin-x) + var(--margin-gap));
+  padding-right: clamp(16px, 2vw, 44px);
+}
+
+/* The one thing that belongs in the margin. Taken out of the flow and hung off
+   the content edge, so its right edge lands exactly on the rule however wide
+   the screen is. */
+.head { position: relative; }
+.partno {
+  position: absolute; right: calc(100% + var(--margin-gap));
+  font-size: clamp(13px, 1.25vw, 20px);
+  white-space: nowrap;
 }
 
 /* ---- The blackboard ----------------------------------------------------
@@ -493,7 +533,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=10" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=11" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -562,10 +602,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=10"></script>
-<script src="questions.js?v=10"></script>
-<script src="anim.js?v=10"></script>
-<script src="live.js?v=10"></script>
+<script src="physics.js?v=11"></script>
+<script src="questions.js?v=11"></script>
+<script src="anim.js?v=11"></script>
+<script src="live.js?v=11"></script>
 <script>
 const $ = id => document.getElementById(id);
 
