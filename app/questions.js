@@ -55,7 +55,7 @@ const QUESTIONS = [
       if (red === violet) return 'They carry the same energy';
       return violet > red ? 'A violet photon' : 'A red photon';
     },
-    why: 'Violet light has a higher frequency, so each photon carries more energy. '
+    why: 'Violet light has a shorter wavelength, so each photon carries more energy. '
        + 'Brightness changes how MANY photons arrive, never how much energy each one has.'
   },
   {

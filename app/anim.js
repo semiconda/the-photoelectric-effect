@@ -74,27 +74,84 @@ const lightColor = spectralColor;
    requirements, so they do not get the same colour. */
 function labelColor(w) { return spectralColor(w, 0.45); }
 
-/* The lane geometry, shared by every drawing so the plates line up down the
-   card however many lanes it has. */
+/* The lane geometry, shared by every drawing so the surfaces line up down the
+   card however many lanes it has.
+ *
+ * THE ARRANGEMENT MATTERS, AND THE FIRST ONE WAS WRONG. It had the light
+ * entering one face of an upright bar and electrons leaving the opposite
+ * face, as though the light went through the metal and knocked them out the
+ * back. That is not the photoelectric effect. Light is absorbed within
+ * nanometres of the surface it strikes and the electrons come back out of
+ * THAT surface, towards the source.
+ *
+ * So the metal is a horizontal slab, the beam arrives from the upper left,
+ * and the electrons leave upwards from the lit face - the same side the light
+ * came in on. The arrangement is now the physics, not just decoration. */
+/* The lane geometry, shared by every drawing so the surfaces line up across
+ * the card however many cases it holds.
+ *
+ * THE ARRANGEMENT MATTERS, AND THE FIRST ONE WAS WRONG. It had the light
+ * entering one face of an upright bar and the electrons leaving the opposite
+ * face, as though the light passed through the metal and knocked them out of
+ * the back. That is not the photoelectric effect. Light is absorbed within
+ * nanometres of the surface it strikes, and the electrons come back out of
+ * THAT surface, towards the source.
+ *
+ * So the metal is a horizontal slab, the beam arrives from the upper left,
+ * and the electrons leave upwards from the lit face - the same side the light
+ * came in on. The picture is the physics now, not decoration around it.
+ *
+ * That shape is tall rather than wide, which is why the cases sit left,
+ * middle, right instead of stacked. */
+/* The viewBox is shaped to the box it lands in rather than to the drawing.
+   A 300x220 picture in a 383x233 cell is HEIGHT-limited: it renders 318 wide
+   and leaves 65px of the cell empty on either side, so everything in it is
+   smaller than the space allows. Matching the aspect spends that width on a
+   longer beam and a wider slab instead. */
 const LANE = {
-  w: 760, h: 80,
-  waveStart: 16, waveEnd: 250,     /* the light */
-  plateX: 292, plateW: 16,         /* the metal */
-  outX: 326,                       /* where an electron appears */
-  travel: 400                      /* how far it flies before looping */
+  w: 360, h: 220,                 /* a tall cell: the cases now sit side by side */
+  slabX: 8, slabW: 344, slabH: 32,
+  surfaceY: 170,          /* the lit face: where light lands and electrons leave */
+  impactX: 120,           /* where the beam meets it */
+  beamAngle: 225,         /* degrees - down and to the right, onto the surface */
+  beamLen: 165,
+  emitMin: 185, emitMax: 338,   /* electrons leave to the RIGHT of the beam, so
+                                   the two never cross */
+  travel: 140             /* how far an electron rises before looping */
 };
+
+/* What each metal looks like.
+ *
+ * Sodium, caesium, zinc and copper are not interchangeable grey bars: caesium
+ * is visibly golden, copper is copper, zinc is blue-grey and sodium a soft
+ * silvery white. Slide 4 turns on two metals behaving differently under
+ * identical light, and that lands harder when they do not look alike.
+ *
+ * Keyed by the name in MATERIALS, with a neutral fallback, so a material
+ * added to physics.js that nobody has given a colour still draws. */
+const METAL = {
+  Sodium: { body: '#9b988e', face: '#dcd9ce', edge: '#f4f1e8' },
+  Cesium: { body: '#a98636', face: '#e9c96c', edge: '#fae6ab' },
+  Zinc:   { body: '#7c868c', face: '#b8c3c9', edge: '#dfe7ec' },
+  Copper: { body: '#8c5330', face: '#d0854f', edge: '#f0b388' }
+};
+const METAL_DEFAULT = { body: '#8a8f93', face: '#c2c7cb', edge: '#e6eaec' };
+function metalLook(name) { return METAL[name] || METAL_DEFAULT; }
 
 /* A wave whose period comes from the wavelength. 700 nm draws a long lazy
    squiggle, 300 nm a tight one — which is the comparison slide 1 is making,
    drawn rather than asserted. */
-function wavePath(y, wavelength, waveEnd) {
-  const end = waveEnd == null ? LANE.waveEnd : waveEnd;
+function wavePath(wavelength, y, from, to, amp) {
   const step = Math.max(4, Math.min(16, wavelength / 46));
-  let d = 'M ' + LANE.waveStart + ' ' + y;
-  let x = LANE.waveStart;
+  /* Taller than the geometry strictly needs. The wave is what the back of the
+     room looks at, and a flat squiggle reads as a line rather than as light.
+     The quarter-period control offset is what sets the height. */
+  const a = amp == null ? 20 : amp;
+  let d = 'M ' + from + ' ' + y;
+  let x = from;
   let first = true;
-  while (x + step * 2 <= end) {
-    d += first ? ' q ' + (step / 2) + ' -9 ' + step + ' 0' : ' t ' + step + ' 0';
+  while (x + step * 2 <= to) {
+    d += first ? ' q ' + (step / 2) + ' -' + a + ' ' + step + ' 0' : ' t ' + step + ' 0';
     first = false;
     x += step;
   }
@@ -110,9 +167,23 @@ function svgEl(name, attrs) {
 /* How many dots, and how fast. Both from physics(), both clamped so the
    picture stays readable rather than accurate to six figures — the caption
    under every card says as much. */
+/* Four dots per unit of rate, and the 4 is not free.
+ *
+ * Slide 4 says "four times the light, four times the rate" and then shows it,
+ * so the two lanes have to come out in a 4:1 ratio or the slide contradicts
+ * itself. At x3 they did not: the dim lane's rate of 0.5 gives 1.5, which
+ * rounds UP to 2, while the bright lane's 2.0 gives exactly 6 - a ratio of 3
+ * under a caption promising 4. Rounding had quietly eaten a quarter of it.
+ *
+ * x4 puts both on whole numbers, 2 and 8, and the picture means what the
+ * caption says. Any future scale has to keep the SMALLEST rate in use landing
+ * on a whole number, or this comes back.
+ *
+ * The cap sits above the largest value the talk produces, for the same
+ * reason: a clamp that bites would flatten the ratio just as rounding did. */
 function dotCount(r) {
   if (!r.emits) return 0;
-  return Math.max(1, Math.min(8, Math.round(r.rate * 3)));
+  return Math.max(1, Math.min(10, Math.round(r.rate * 4)));
 }
 function dotDuration(r) {
   /* v is proportional to sqrt(K), so the time to cross is proportional to
@@ -122,7 +193,10 @@ function dotDuration(r) {
 
 /* One lane: the light, the plate, and what comes off it. */
 function buildLane(spec) {
-  const r = physics(spec.wavelength, spec.intensity, spec.phi);
+  /* The work function is looked up from the material's NAME through
+     phiOf(), so a lane cannot draw a metal the simulation does not have, and
+     cannot draw it with a phi the quiz is not scored against. */
+  const r = physics(spec.wavelength, spec.intensity, phiOf(spec.material));
   const colour = lightColor(spec.wavelength);
 
   const lane = document.createElement('div');
@@ -158,54 +232,87 @@ function buildLane(spec) {
     'aria-label': spec.label + ': ' + resultText(spec, r)
   });
 
-  /* Two wave lines where the light is a BEAM arriving at something. One where
-     the slide is about a single photon's wave, which is slide 1: a second line
-     there only invites "what is the other one?". */
-  const bare = spec.show === 'energy';
-  const end  = bare ? LANE.w - 16 : LANE.waveEnd;
-  (bare ? [40] : [30, 50]).forEach(y => svg.appendChild(svgEl('path', {
-    d: wavePath(y, spec.wavelength, end), fill: 'none', stroke: colour,
-    'stroke-width': bare ? 3 : 2.4
-  })));
-  /* The arrow that says which way it is going. */
-  if (spec.show !== 'energy') svg.appendChild(svgEl('path', {
-    d: 'M 258 40 H 284 m -7 -6 l 7 6 -7 6',
-    fill: 'none', stroke: colour, 'stroke-width': 2.4
-  }));
-
   /* Slide 1 asks about the photon BEFORE it reaches anything, so that lane has
-     no metal in it and nothing coming off it. Drawing a plate there would
+     no metal in it and nothing coming off it. Drawing a surface there would
      invite the question the slide has not asked yet. */
   if (spec.show === 'energy') {
+    svg.appendChild(svgEl('path', {
+      d: wavePath(spec.wavelength, LANE.h / 2, 14, LANE.w - 14, 30),
+      fill: 'none', stroke: colour, 'stroke-width': 4, 'stroke-linecap': 'round'
+    }));
     lane.appendChild(svg);
     result.textContent = resultText(spec, r);
     return lane;
   }
 
-  /* The metal. Amber is the work function's colour everywhere in this project. */
+  /* ---- The metal ---------------------------------------------------------
+     A slab lying flat, with its lit face on top. Three bands: the body, the
+     face catching the light, and a bright line along the very edge, which is
+     what makes it read as a surface rather than a coloured rectangle. */
+  const metal = metalLook(spec.material);
   svg.appendChild(svgEl('rect', {
-    x: LANE.plateX, y: 4, width: LANE.plateW, height: LANE.h - 8,
-    rx: 2, fill: 'var(--chalk-amber)'
+    x: LANE.slabX, y: LANE.surfaceY, width: LANE.slabW, height: LANE.slabH,
+    rx: 3, fill: metal.body
+  }));
+  svg.appendChild(svgEl('rect', {
+    x: LANE.slabX, y: LANE.surfaceY, width: LANE.slabW, height: 10,
+    fill: metal.face
+  }));
+  svg.appendChild(svgEl('line', {
+    x1: LANE.slabX, x2: LANE.slabX + LANE.slabW,
+    y1: LANE.surfaceY + 1, y2: LANE.surfaceY + 1,
+    stroke: metal.edge, 'stroke-width': 2.4
   }));
 
+  /* ---- The light ---------------------------------------------------------
+     Drawn flat and then rotated onto the surface, so one wave function serves
+     any angle. The two lines are offset across the beam, not up the page, so
+     they stay parallel to it once it is turned. */
+  const beam = svgEl('g', {
+    transform: 'translate(' + LANE.impactX + ',' + LANE.surfaceY + ') '
+             + 'rotate(' + LANE.beamAngle + ')'
+  });
+  [-10, 10].forEach(off => beam.appendChild(svgEl('path', {
+    d: wavePath(spec.wavelength, off, 20, LANE.beamLen, 13),
+    fill: 'none', stroke: colour, 'stroke-width': 3.2, 'stroke-linecap': 'round'
+  })));
+  beam.appendChild(svgEl('path', {
+    d: 'M 42 -11 L 23 0 L 42 11',
+    fill: 'none', stroke: colour, 'stroke-width': 3.2,
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+  }));
+  svg.appendChild(beam);
+
+  /* ---- What comes off it -------------------------------------------------
+     Upwards, out of the lit face, on the same side the light arrived. */
   const n = dotCount(r);
   if (n === 0) {
-    /* Nothing comes out. The light stops at the plate, and the lane is
-       deliberately, visibly empty to the right of it. */
+    /* Nothing comes out, and the space above the surface is deliberately,
+       visibly empty apart from the cross. */
     svg.appendChild(svgEl('path', {
-      d: 'M ' + (LANE.outX + 6) + ' 28 l 22 24 m 0 -24 l -22 24',
-      fill: 'none', stroke: 'var(--no-emit)', 'stroke-width': 2.4,
+      d: 'M 216 94 l 52 52 m 0 -52 l -52 52',
+      fill: 'none', stroke: 'var(--no-emit)', 'stroke-width': 4.4,
       'stroke-linecap': 'round', opacity: '.85'
     }));
   } else {
     const duration = dotDuration(r);
+    const span = LANE.emitMax - LANE.emitMin;
     for (let i = 0; i < n; i++) {
-      const cy = n === 1 ? 40 : 14 + (52 / (n - 1)) * i;
+      const cx = n === 1 ? LANE.emitMin + span / 2
+                         : LANE.emitMin + (span / (n - 1)) * i;
       const dot = svgEl('circle', {
-        class: 'e', cx: LANE.outX, cy: cy.toFixed(1), r: 5, fill: 'var(--emit)'
+        class: 'e', cx: cx.toFixed(1), cy: LANE.surfaceY - 10, r: 6.5,
+        fill: 'var(--emit)'
       });
       dot.style.setProperty('--duration', duration);
-      dot.style.setProperty('--delay', '-' + (i / n * parseFloat(duration)).toFixed(2) + 's');
+      /* Scattered by the golden ratio rather than spread evenly across the
+         cycle. Even spacing puts electron i at height i, so a row of them
+         climbing straight up lines up into a diagonal and reads as sideways
+         motion - the one thing this picture must not say. 0.618 never
+         repeats, so no two are ever at the same height and no run of them
+         forms a line. */
+      const phase = (i * 0.6180339887) % 1;
+      dot.style.setProperty('--delay', '-' + (phase * parseFloat(duration)).toFixed(2) + 's');
       svg.appendChild(dot);
     }
   }
@@ -320,18 +427,25 @@ function buildCard(card) {
   held.textContent = card.held;
   el.appendChild(held);
 
+  /* The cases sit side by side - left, middle, right - because each one is
+     now a tall picture: light coming down onto a surface and electrons
+     leaving it. Stacked, three of those would be three slivers. */
+  const lanes = document.createElement('div');
+  lanes.className = 'lanes';
+  card.lanes.forEach(spec => lanes.appendChild(buildLane(spec)));
+
   if (card.aside === 'spectrum') {
-    /* Lanes on the left, the reference strip on the right. */
+    /* Cases on the left, the reference strip on the right. */
     const row = document.createElement('div');
     row.className = 'cardrow';
     const left = document.createElement('div');
     left.className = 'cardlanes';
-    card.lanes.forEach(spec => left.appendChild(buildLane(spec)));
+    left.appendChild(lanes);
     row.appendChild(left);
     row.appendChild(buildSpectrum());
     el.appendChild(row);
   } else {
-    card.lanes.forEach(spec => el.appendChild(buildLane(spec)));
+    el.appendChild(lanes);
   }
 
   const take = document.createElement('strong');
@@ -353,14 +467,13 @@ function buildCard(card) {
    lane can never draw a material the simulation does not have. */
 
 function ANIMATIONS(part) {
-  const Na = phiOf('Sodium');
 
   if (part === 1) return [{
     title: 'Shorter wavelength, more energy',
     held: 'The light on its own — before it reaches anything',
     lanes: [
-      { wavelength: 700, intensity: 50, phi: Na, label: '700 nm', sub: 'Red',    show: 'energy' },
-      { wavelength: 400, intensity: 50, phi: Na, label: '400 nm', sub: 'Violet', show: 'energy' }
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm', sub: 'Red',    show: 'energy' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Violet', show: 'energy' }
     ],
     aside: 'spectrum',
     takeaway: 'Same beam, different photons.',
@@ -371,8 +484,8 @@ function ANIMATIONS(part) {
     title: 'Enough energy, or not',
     held: 'Sodium · same brightness',
     lanes: [
-      { wavelength: 700, intensity: 50, phi: Na, label: '700 nm', sub: 'Below the work function' },
-      { wavelength: 400, intensity: 50, phi: Na, label: '400 nm', sub: 'Above the work function' }
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm', sub: 'Below the work function' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Above the work function' }
     ],
     takeaway: 'Below the barrier, nothing comes out at all.',
     note: 'Sodium needs 2.30 eV. The red photon brings 1.77 eV and is turned away.'
@@ -382,9 +495,9 @@ function ANIMATIONS(part) {
     title: 'Red, violet, ultraviolet',
     held: 'Sodium · same brightness',
     lanes: [
-      { wavelength: 700, intensity: 50, phi: Na, label: '700 nm', sub: 'Red' },
-      { wavelength: 400, intensity: 50, phi: Na, label: '400 nm', sub: 'Violet' },
-      { wavelength: 300, intensity: 50, phi: Na, label: '300 nm', sub: 'Ultraviolet' }
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm', sub: 'Red' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Violet' },
+      { wavelength: 300, intensity: 50, material: 'Sodium', label: '300 nm', sub: 'Ultraviolet' }
     ],
     takeaway: 'Nothing, then electrons, then faster electrons.',
     note: 'Speed comparison; the number of dots is illustrative.'
@@ -395,8 +508,8 @@ function ANIMATIONS(part) {
       title: 'More light',
       held: 'Sodium · same wavelength (400 nm)',
       lanes: [
-        { wavelength: 400, intensity: 25,  phi: Na, label: '25%',  sub: 'Dim' },
-        { wavelength: 400, intensity: 100, phi: Na, label: '100%', sub: 'Bright' }
+        { wavelength: 400, intensity: 25,  material: 'Sodium', label: '25%',  sub: 'Dim' },
+        { wavelength: 400, intensity: 100, material: 'Sodium', label: '100%', sub: 'Bright' }
       ],
       takeaway: 'More electrons. Same speed.',
       note: 'Four times the light, four times the rate — and not one electron faster.'
@@ -405,8 +518,8 @@ function ANIMATIONS(part) {
       title: 'A different metal',
       held: 'Same light · 400 nm · same brightness',
       lanes: [
-        { wavelength: 400, intensity: 50, phi: phiOf('Copper'), label: 'Copper', sub: 'φ = 4.70 eV' },
-        { wavelength: 400, intensity: 50, phi: Na,              label: 'Sodium', sub: 'φ = 2.30 eV' }
+        { wavelength: 400, intensity: 50, material: 'Copper', label: 'Copper', sub: 'φ = 4.70 eV' },
+        { wavelength: 400, intensity: 50, material: 'Sodium', label: 'Sodium', sub: 'φ = 2.30 eV' }
       ],
       takeaway: 'Same photons. A lower barrier lets them out.',
       note: 'The light has not changed at all between these two lanes.'
