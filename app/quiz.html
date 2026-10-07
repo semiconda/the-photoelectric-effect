@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '16';
+const BUILD = '17';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=16">
+<link rel="stylesheet" href="theme.css?v=17">
 <style>
 /* Phone-first. This page is opened by scanning a QR code on the projector,
    over classroom wifi, so it stays small: no images, no libraries. */
@@ -160,10 +160,10 @@ body.newgroup #newgroup { display: flex; }
   <p class="placeholder" id="doneNote"></p>
 </section>
 
-<script src="physics.js?v=16"></script>
-<script src="questions.js?v=16"></script>
-<script src="scoreboard.js?v=16"></script>
-<script src="live.js?v=16"></script>
+<script src="physics.js?v=17"></script>
+<script src="questions.js?v=17"></script>
+<script src="scoreboard.js?v=17"></script>
+<script src="live.js?v=17"></script>
 <script>
 const $ = id => document.getElementById(id);
 

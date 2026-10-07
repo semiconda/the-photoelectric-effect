@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '16';
+const BUILD = '17';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=16">
+<link rel="stylesheet" href="theme.css?v=17">
 <style>
 html, body { height: 100%; }
 
@@ -573,7 +573,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=16" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=17" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -644,10 +644,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=16"></script>
-<script src="questions.js?v=16"></script>
-<script src="anim.js?v=16"></script>
-<script src="live.js?v=16"></script>
+<script src="physics.js?v=17"></script>
+<script src="questions.js?v=17"></script>
+<script src="anim.js?v=17"></script>
+<script src="live.js?v=17"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -711,10 +711,20 @@ const PARTS = [
     title: 'Change the color. Change the result.',
     lead: 'Shorter wavelength → higher photon energy.',
     groups: [{ items: [
-      /* These two stay: they are where the word "threshold" is introduced,
-         and the board never writes it. */
-      'Below the threshold: no electrons escape.',
-      'Above the threshold: electrons escape.'
+      /* "Below the threshold" was BACKWARDS here, and dangerously so on a
+         slide whose every number is a wavelength. Sodium's threshold is
+         539 nm; 700 nm is BELOW it on the scale this slide uses and emits
+         nothing, 400 nm is above it and emits. The sentence is only true if
+         "threshold" silently means energy or frequency - which is exactly
+         the swap this talk decided not to make the audience do.
+
+         Said in energy it is unambiguous, and the third line turns it back
+         into the quantity on screen. The number is computed, never typed. */
+      'A photon below the threshold energy releases nothing, however bright the light.',
+      'Above it, electrons escape.',
+      'For sodium that threshold falls at '
+        + physics(400, 50, phiOf('Sodium')).threshold.toFixed(0)
+        + ' nm — anything redder does nothing.'
       /* "Higher photon energy above the threshold: higher maximum electron
          speed" was the third. It is the takeaway under the board, and the
          two Kmax values, and the visibly faster dots. */
@@ -735,7 +745,8 @@ const PARTS = [
            card's takeaway, word for word: "More electrons. Same speed." */
         /* The caveat stays: the board shows 400 nm twice, never dim red, so
            this is the one case it does not cover. */
-        'Below the threshold, increasing intensity does not cause emission in the single-photon model.'
+        /* "energy", not bare "threshold" - see slide 3. */
+        'Below the threshold energy, increasing intensity does not cause emission in the single-photon model.'
       ] },
       { head: 'Change the material:', items: [
         'Different metals have different work functions.',

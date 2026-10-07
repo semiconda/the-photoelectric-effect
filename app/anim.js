@@ -466,6 +466,12 @@ function buildCard(card) {
    Work functions are looked up by name through phiOf() in questions.js, so a
    lane can never draw a material the simulation does not have. */
 
+/* A photon energy at some wavelength, for a caption. Read off physics(),
+   like every other number on a card. */
+function evAt(wavelength) {
+  return physics(wavelength, 50, phiOf('Sodium')).energy.toFixed(2) + ' eV';
+}
+
 function ANIMATIONS(part) {
 
   if (part === 1) return [{
@@ -476,16 +482,27 @@ function ANIMATIONS(part) {
       { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Violet', show: 'energy' }
     ],
     aside: 'spectrum',
-    takeaway: 'Same beam, different photons.',
+    /* "Same beam, different photons" was simply untrue: these are two
+       different beams. What is actually being shown is that the colour, and
+       nothing else, fixes what one photon is worth. */
+    takeaway: 'The colour sets what every photon in the beam is worth.',
     note: 'The tighter the wave, the more energy each photon carries.'
   }];
 
   if (part === 2) return [{
     title: 'Enough energy, or not',
-    held: 'Sodium · same brightness',
+    /* Every number here is read off physics(), including the work function,
+       which comes from MATERIALS through phiOf(). */
+    held: 'Sodium · φ = ' + phiOf('Sodium').toFixed(2) + ' eV · same brightness',
     lanes: [
-      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm', sub: 'Below the work function' },
-      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Above the work function' }
+      /* A WAVELENGTH is not above or below a work function - a photon's
+         ENERGY is. Naming the energy is both more correct and more use: it
+         puts 1.77 and 3.10 next to 2.30 and lets the room do the comparison
+         itself rather than being told the answer. */
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm',
+        sub: 'photon ' + evAt(700) + ' — below φ' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm',
+        sub: 'photon ' + evAt(400) + ' — above φ' }
     ],
     takeaway: 'Below the barrier, nothing comes out at all.',
     note: 'Sodium needs 2.30 eV. The red photon brings 1.77 eV and is turned away.'
@@ -500,7 +517,13 @@ function ANIMATIONS(part) {
       { wavelength: 300, intensity: 50, material: 'Sodium', label: '300 nm', sub: 'Ultraviolet' }
     ],
     takeaway: 'Nothing, then electrons, then faster electrons.',
-    note: 'Speed comparison; the number of dots is illustrative.'
+    /* The dots are NOT illustrative - they are the model's rate, and at a
+       fixed brightness that rate falls as the wavelength shortens, because
+       the same power delivered in bigger packets is fewer packets. The old
+       caption waved that away; the picture is more interesting than the
+       hand-wave, so it says what is actually happening. */
+    note: 'Same brightness means fewer photons when each one carries more: '
+        + 'fewer electrons, each of them faster.'
   }];
 
   if (part === 4) return [
