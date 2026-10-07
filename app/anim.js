@@ -117,18 +117,46 @@ const LANE = {
   beamLen: 165,
   emitMin: 185, emitMax: 338,   /* electrons leave to the RIGHT of the beam, so
                                    the two never cross */
-  travel: 140             /* how far an electron rises before looping */
+  travel: 190             /* clear off the top, so the loop is never seen */
 };
 
 /* Slide 1's lane has no metal in it, so it has no use for a tall cell. Its
-   own box is long and shallow, which is the shape a wave wants: the point
-   being made is the PERIOD, and a period only reads if several of them fit
-   across. Filling the cell it was borrowing from the metal lanes left the
-   wave as a thin band in the middle of a lot of nothing. */
+   own box is long and shallow, which is the shape a wave wants.
+ *
+ * HOW MANY CYCLES. The period cannot come from the same formula the beam
+ * uses: that one is tuned to a 107-unit stretch of beam, and across 580 units
+ * it drew nineteen cycles of red and THIRTY-THREE of violet. At that density
+ * neither is a wave any more, they are both a solid block of ink, and the one
+ * thing the slide exists to show - that one is tighter than the other - is
+ * the first thing to disappear. Seven cycles of red reads as a wave; violet
+ * keeps the exact ratio, so it comes out at 700/400 of that, and the
+ * comparison survives being legible.
+ *
+ * AND IT MOVES. Both waves scroll at the SAME speed, because light does: what
+ * differs is how many crests go past in a second. That is c = lambda f drawn
+ * rather than asserted - the violet wave visibly cycles faster while travelling
+ * no quicker. The path is drawn one period wider than the box and translated
+ * by exactly one period, so the loop has no seam. */
 /* The proportions are measured, not guessed: the cell this lands in comes out
    607x73, so an 8.3:1 box fills it. At 600x80 it was height-limited and drew
    546px wide inside 607 - a tenth of the width given away for nothing. */
-const WAVE_ONLY = { w: 600, h: 72, mid: 36, amp: 62, from: 10, to: 590 };
+/* A photon in flight: a short wave train, and how long one takes to cross.
+   The flight time is the same for every colour, because the speed of light
+   is - only the electron's flight depends on energy. */
+/* The flight is deliberately the longer half of the cycle: a photon that is
+   only on screen for a third of it leaves the beam looking empty, and the
+   beam is where "how many" is read. */
+const PACKET = { len: 62, flight: 1.7 };
+
+const WAVE_ONLY = {
+  w: 600, h: 72, mid: 36, amp: 62,
+  stepAt700: 41,        /* half-period of the red wave: seven cycles across */
+  speed: 52             /* units per second - the same for every colour */
+};
+/* The half-period in drawing units, in proportion to the real wavelength. */
+function waveStep(wavelength) {
+  return WAVE_ONLY.stepAt700 * (wavelength / 700);
+}
 
 /* What each metal looks like.
  *
@@ -151,8 +179,9 @@ function metalLook(name) { return METAL[name] || METAL_DEFAULT; }
 /* A wave whose period comes from the wavelength. 700 nm draws a long lazy
    squiggle, 300 nm a tight one — which is the comparison slide 1 is making,
    drawn rather than asserted. */
-function wavePath(wavelength, y, from, to, amp) {
-  const step = Math.max(4, Math.min(16, wavelength / 46));
+function wavePath(wavelength, y, from, to, amp, stepUnits) {
+  const step = stepUnits != null ? stepUnits
+                                 : Math.max(4, Math.min(16, wavelength / 46));
   /* Taller than the geometry strictly needs. The wave is what the back of the
      room looks at, and a flat squiggle reads as a line rather than as light.
      The quarter-period control offset is what sets the height. */
@@ -168,6 +197,52 @@ function wavePath(wavelength, y, from, to, amp) {
   return d;
 }
 
+/* ---- Pairing a photon with its electron ---------------------------------
+ * CSS can only keep two animations in step if they share a duration, so the
+ * pair shares ONE cycle and splits it: the photon flies for the first part,
+ * the electron for the rest. Where the split falls depends on how fast that
+ * particular electron leaves, which depends on its energy - so the keyframes
+ * cannot be written once in the stylesheet. They are generated per lane.
+ *
+ * The two per-lane rules are the whole trick. Photon and electron get the
+ * same duration and the same negative delay, so the electron starts moving on
+ * the exact frame its photon lands, every cycle, for as long as the page is
+ * open - with no timer, no script running and nothing to drift. */
+let laneSeq = 0;
+
+function laneStyle() {
+  let el = document.getElementById('laneAnim');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'laneAnim';
+    document.head.appendChild(el);
+  }
+  return el;
+}
+
+function keyframesFor(id, landPct, startX, travel) {
+  const f = landPct.toFixed(2);
+  const g = Math.min(landPct + 0.4, 99).toFixed(2);
+  laneStyle().textContent +=
+    '@keyframes pk-' + id + '{' +
+      '0%{transform:translateX(' + startX + 'px);opacity:1}' +
+      f + '%{transform:translateX(0px);opacity:1}' +
+      g + '%{transform:translateX(0px);opacity:0}' +
+      '100%{transform:translateX(0px);opacity:0}}' +
+    '@keyframes el-' + id + '{' +
+      '0%{transform:translateY(0px);opacity:0}' +
+      f + '%{transform:translateY(0px);opacity:0}' +
+      g + '%{transform:translateY(0px);opacity:1}' +
+      '100%{transform:translateY(-' + travel + 'px);opacity:1}}';
+}
+
+/* Scattered by the golden ratio rather than spread evenly across the cycle.
+   Even spacing puts the i-th electron at height i, so a row of them climbing
+   straight up lines up into a diagonal and reads as sideways motion - the one
+   thing this picture must not say. 0.618 never repeats, so no two are ever at
+   the same height. Photon arrivals are not evenly spaced in reality either. */
+function phaseOf(i, n) { return (i * 0.6180339887) % 1; }
+
 function svgEl(name, attrs) {
   const n = document.createElementNS('http://www.w3.org/2000/svg', name);
   Object.keys(attrs || {}).forEach(k => n.setAttribute(k, attrs[k]));
@@ -177,7 +252,7 @@ function svgEl(name, attrs) {
 /* How many dots, and how fast. Both from physics(), both clamped so the
    picture stays readable rather than accurate to six figures — the caption
    under every card says as much. */
-/* Four dots per unit of rate, and the 4 is not free.
+/* Eight per unit of rate, and the 8 is not free.
  *
  * Slide 4 says "four times the light, four times the rate" and then shows it,
  * so the two lanes have to come out in a 4:1 ratio or the slide contradicts
@@ -185,15 +260,18 @@ function svgEl(name, attrs) {
  * rounds UP to 2, while the bright lane's 2.0 gives exactly 6 - a ratio of 3
  * under a caption promising 4. Rounding had quietly eaten a quarter of it.
  *
- * x4 puts both on whole numbers, 2 and 8, and the picture means what the
- * caption says. Any future scale has to keep the SMALLEST rate in use landing
- * on a whole number, or this comes back.
+ * Any scale has to keep the SMALLEST rate in use landing on a whole number,
+ * or that comes back. x8 does, and it is finer than x4 for a second reason:
+ * each photon is only on screen while it is in flight, which is about half
+ * the cycle, so the number ON SCREEN is about half the number counted. At x4
+ * "four times brighter" was one packet against four. At x8 it is four against
+ * sixteen, and nobody has to count to see it.
  *
  * The cap sits above the largest value the talk produces, for the same
  * reason: a clamp that bites would flatten the ratio just as rounding did. */
 function dotCount(r) {
   if (!r.emits) return 0;
-  return Math.max(1, Math.min(10, Math.round(r.rate * 4)));
+  return Math.max(1, Math.min(20, Math.round(r.rate * 8)));
 }
 function dotDuration(r) {
   /* v is proportional to sqrt(K), so the time to cross is proportional to
@@ -232,7 +310,8 @@ function buildLane(spec) {
 
   const result = document.createElement('div');
   result.className = 'lane-result';
-  if (spec.show !== 'energy') head.appendChild(result);
+  result.textContent = resultText(spec, r);
+  head.appendChild(result);
 
   lane.appendChild(head);
 
@@ -248,16 +327,24 @@ function buildLane(spec) {
   if (spec.show === 'energy') {
     lane.classList.add('bare');
     svg.setAttribute('viewBox', '0 0 ' + WAVE_ONLY.w + ' ' + WAVE_ONLY.h);
-    svg.appendChild(svgEl('path', {
-      d: wavePath(spec.wavelength, WAVE_ONLY.mid, WAVE_ONLY.from, WAVE_ONLY.to,
-                  WAVE_ONLY.amp),
-      fill: 'none', stroke: colour, 'stroke-width': 5, 'stroke-linecap': 'round'
-    }));
+    svg.setAttribute('preserveAspectRatio', 'none');
+
+    const step   = waveStep(spec.wavelength);
+    const period = step * 2;
+    /* Drawn a period wider than the box at each end, so translating by one
+       period lands on an identical picture and the loop cannot be seen. */
+    const wave = svgEl('path', {
+      class: 'w',
+      d: wavePath(spec.wavelength, WAVE_ONLY.mid, -period * 2, WAVE_ONLY.w + period * 2,
+                  WAVE_ONLY.amp, step),
+      fill: 'none', stroke: colour, 'stroke-width': 4.5, 'stroke-linecap': 'round'
+    });
+    /* Same speed, so the duration is just however long one period takes. */
+    wave.style.setProperty('--period', period + 'px');
+    wave.style.setProperty('--cycle', (period / WAVE_ONLY.speed).toFixed(3) + 's');
+    svg.appendChild(wave);
+
     lane.appendChild(svg);
-    /* The label goes above the wave and the energy below it, both centred on
-       the wave rather than ranged left against nothing. */
-    result.textContent = resultText(spec, r);
-    lane.appendChild(result);
     return lane;
   }
 
@@ -280,55 +367,77 @@ function buildLane(spec) {
     stroke: metal.edge, 'stroke-width': 2.4
   }));
 
-  /* ---- The light ---------------------------------------------------------
-     Drawn flat and then rotated onto the surface, so one wave function serves
-     any angle. The two lines are offset across the beam, not up the page, so
-     they stay parallel to it once it is turned. */
+  /* ---- The light, arriving one photon at a time --------------------------
+     Not a continuous beam any more. A beam says "light is shining"; a stream
+     of packets says how MANY arrive, which is the quantity the whole talk
+     turns on - and it lets each one be paired with the electron it releases,
+     so the emission is visibly caused rather than merely co-located.
+
+     How many are in flight comes from the model with the barrier taken away:
+     physics(w, i, 0).rate is the arrival rate on its own, since nothing can
+     stop a photon that has no work function to climb. Asking the model that
+     way rather than retyping its formula keeps one source for it.
+
+     The consequence is worth the whole change. At the same brightness, RED
+     light arrives in more photons than violet - each one is worth less, so
+     there are more of them for the same power. Slide 3's red lane now shows
+     seven photons landing and not one electron leaving, while violet shows
+     four and four. "It is not how many, it is how much each one carries" is
+     no longer a sentence under the picture; it is the picture. */
+  const arrivals = dotCount(physics(spec.wavelength, spec.intensity, 0));
+  const n        = dotCount(r);          /* electrons: 0 when nothing escapes */
+  const id       = 'ln' + (laneSeq++);
+
+  /* Every photon crosses in the same time, whatever its colour, because they
+     all travel at the same speed. Only the electron's flight depends on what
+     it was given. */
+  const escape = n ? 1.273 / Math.sqrt(Math.max(r.k, 0.05)) : 0.9;
+  const cycle  = PACKET.flight + escape;
+  const land   = PACKET.flight / cycle * 100;
+
+  keyframesFor(id, land, LANE.beamLen - PACKET.len, LANE.travel);
+
   const beam = svgEl('g', {
     transform: 'translate(' + LANE.impactX + ',' + LANE.surfaceY + ') '
              + 'rotate(' + LANE.beamAngle + ')'
   });
-  [-10, 10].forEach(off => beam.appendChild(svgEl('path', {
-    d: wavePath(spec.wavelength, off, 20, LANE.beamLen, 13),
-    fill: 'none', stroke: colour, 'stroke-width': 3.2, 'stroke-linecap': 'round'
-  })));
-  beam.appendChild(svgEl('path', {
-    d: 'M 42 -11 L 23 0 L 42 11',
-    fill: 'none', stroke: colour, 'stroke-width': 3.2,
-    'stroke-linecap': 'round', 'stroke-linejoin': 'round'
-  }));
+  for (let i = 0; i < arrivals; i++) {
+    const pk = svgEl('path', {
+      class: 'pk',
+      d: wavePath(spec.wavelength, 0, 4, PACKET.len, 22,
+                  Math.max(5, Math.min(13, spec.wavelength / 46))),
+      fill: 'none', stroke: colour, 'stroke-width': 3.4, 'stroke-linecap': 'round'
+    });
+    pk.style.animationName = 'pk-' + id;
+    pk.style.animationDuration = cycle.toFixed(2) + 's';
+    pk.style.animationDelay = '-' + (phaseOf(i, arrivals) * cycle).toFixed(2) + 's';
+    beam.appendChild(pk);
+  }
   svg.appendChild(beam);
 
   /* ---- What comes off it -------------------------------------------------
-     Upwards, out of the lit face, on the same side the light arrived. */
-  const n = dotCount(r);
+     Upwards, out of the lit face, on the same side the light arrived - and
+     from the spot the light lands on, not from somewhere convenient. Each one
+     leaves on the beat its own photon lands, which is what the shared cycle
+     and the shared phase buy. */
   if (n === 0) {
-    /* Nothing comes out, and the space above the surface is deliberately,
-       visibly empty apart from the cross. */
     svg.appendChild(svgEl('path', {
       d: 'M 216 94 l 52 52 m 0 -52 l -52 52',
       fill: 'none', stroke: 'var(--no-emit)', 'stroke-width': 4.4,
       'stroke-linecap': 'round', opacity: '.85'
     }));
   } else {
-    const duration = dotDuration(r);
-    const span = LANE.emitMax - LANE.emitMin;
     for (let i = 0; i < n; i++) {
-      const cx = n === 1 ? LANE.emitMin + span / 2
-                         : LANE.emitMin + (span / (n - 1)) * i;
+      /* A hand's width of spread, so a stream of them from one spot does not
+         stack into what looks like a single dot. */
+      const dx = ((i % 5) - 2) * 9;
       const dot = svgEl('circle', {
-        class: 'e', cx: cx.toFixed(1), cy: LANE.surfaceY - 10, r: 6.5,
+        class: 'e', cx: LANE.impactX + dx, cy: LANE.surfaceY - 9, r: 6.5,
         fill: 'var(--emit)'
       });
-      dot.style.setProperty('--duration', duration);
-      /* Scattered by the golden ratio rather than spread evenly across the
-         cycle. Even spacing puts electron i at height i, so a row of them
-         climbing straight up lines up into a diagonal and reads as sideways
-         motion - the one thing this picture must not say. 0.618 never
-         repeats, so no two are ever at the same height and no run of them
-         forms a line. */
-      const phase = (i * 0.6180339887) % 1;
-      dot.style.setProperty('--delay', '-' + (phase * parseFloat(duration)).toFixed(2) + 's');
+      dot.style.animationName = 'el-' + id;
+      dot.style.animationDuration = cycle.toFixed(2) + 's';
+      dot.style.animationDelay = '-' + (phaseOf(i, n) * cycle).toFixed(2) + 's';
       svg.appendChild(dot);
     }
   }
@@ -584,6 +693,9 @@ function ANIMATIONS(part) {
    so the caller can leave the slot alone when a part has no animation. */
 function paintAnimationInto(box, part) {
   while (box.firstChild) box.removeChild(box.firstChild);
+  /* The per-lane keyframes belong to the lanes being replaced. */
+  laneStyle().textContent = '';
+  laneSeq = 0;
   const cards = ANIMATIONS(part);
   if (!cards) return false;
   /* One card has the whole stage to itself; two share it. */

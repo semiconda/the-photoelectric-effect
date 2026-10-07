@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '18';
+const BUILD = '19';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=18">
+<link rel="stylesheet" href="theme.css?v=19">
 <style>
 html, body { height: 100%; }
 
@@ -219,11 +219,25 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
                              border-top: 1px solid var(--rule-soft);
                              padding-top: .3em; }
 
-/* A wave with no metal under it: label above, energy below, both centred on
-   the wave instead of ranged left against nothing. */
-.lane.bare { justify-content: center; }
-.lane.bare .lane-head { align-items: center; text-align: center; }
-.lane.bare .lane-result { text-align: center; }
+/* A wave with no metal under it: wavelength and energy share one line, and
+   the wave sits directly under them with everything else's height. */
+.lane.bare { justify-content: flex-start; }
+.lane.bare .lane-head { flex-direction: row; align-items: baseline;
+                        justify-content: center; gap: 1.1em; }
+/* Clipped, unlike the metal lanes: the wave is drawn wider than the box on
+   purpose so the loop has no seam, and that overhang must not escape onto
+   the rest of the card. */
+.lane.bare svg { flex: 1 1 auto; overflow: hidden; }
+
+/* The light travels, and every colour travels at the same speed - what
+   differs is how many crests go past. The path is drawn wider than the box
+   and shifted by exactly one period, so the loop has no seam. */
+.lane .w { animation: wave-travel var(--cycle) linear infinite; }
+@keyframes wave-travel {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(-1 * var(--period))); }
+}
+@media (prefers-reduced-motion: reduce) { .lane .w { animation: none; } }
 .lane { flex: 1 1 0; min-width: 0; min-height: 0;
         display: flex; flex-direction: column; gap: .15em; }
 .lane + .lane { border-left: 1px solid var(--rule-soft);
@@ -269,16 +283,18 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .card-note { flex: none; font-size: clamp(12px, 1.2vw, 17px);
              color: var(--chalk-dim); margin: 0; }
 
-/* The one moving part on the page. Distance matches LANE.travel in anim.js. */
-.lane .e { animation: electron-travel var(--duration) linear infinite;
-           animation-delay: var(--delay); }
-@keyframes electron-travel {
-  from { transform: translateY(0); }
-  to   { transform: translateY(-140px); }
-}
+/* Photons and electrons: the NAME, duration and delay of each one are set
+   per lane in anim.js, because where the cycle splits depends on how fast
+   that lane's electron leaves. Only the shared parts live here. */
+.lane .pk, .lane .e { animation-timing-function: linear;
+                      animation-iteration-count: infinite; }
+/* The metal lanes clip, so an electron leaving the top of the frame is gone
+   rather than drawn outside the blackboard. */
+.lane:not(.bare) svg { overflow: hidden; }
+
 /* Someone who asked not to see movement gets the same picture, held still. */
 @media (prefers-reduced-motion: reduce) {
-  .lane .e { animation: none; }
+  .lane .pk, .lane .e { animation: none; }
 }
 
 /* ---- The open question --------------------------------------------------
@@ -588,7 +604,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=18" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=19" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -659,10 +675,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=18"></script>
-<script src="questions.js?v=18"></script>
-<script src="anim.js?v=18"></script>
-<script src="live.js?v=18"></script>
+<script src="physics.js?v=19"></script>
+<script src="questions.js?v=19"></script>
+<script src="anim.js?v=19"></script>
+<script src="live.js?v=19"></script>
 <script>
 const $ = id => document.getElementById(id);
 
