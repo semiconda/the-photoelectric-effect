@@ -120,6 +120,16 @@ const LANE = {
   travel: 140             /* how far an electron rises before looping */
 };
 
+/* Slide 1's lane has no metal in it, so it has no use for a tall cell. Its
+   own box is long and shallow, which is the shape a wave wants: the point
+   being made is the PERIOD, and a period only reads if several of them fit
+   across. Filling the cell it was borrowing from the metal lanes left the
+   wave as a thin band in the middle of a lot of nothing. */
+/* The proportions are measured, not guessed: the cell this lands in comes out
+   607x73, so an 8.3:1 box fills it. At 600x80 it was height-limited and drew
+   546px wide inside 607 - a tenth of the width given away for nothing. */
+const WAVE_ONLY = { w: 600, h: 72, mid: 36, amp: 62, from: 10, to: 590 };
+
 /* What each metal looks like.
  *
  * Sodium, caesium, zinc and copper are not interchangeable grey bars: caesium
@@ -222,7 +232,7 @@ function buildLane(spec) {
 
   const result = document.createElement('div');
   result.className = 'lane-result';
-  head.appendChild(result);
+  if (spec.show !== 'energy') head.appendChild(result);
 
   lane.appendChild(head);
 
@@ -236,12 +246,18 @@ function buildLane(spec) {
      no metal in it and nothing coming off it. Drawing a surface there would
      invite the question the slide has not asked yet. */
   if (spec.show === 'energy') {
+    lane.classList.add('bare');
+    svg.setAttribute('viewBox', '0 0 ' + WAVE_ONLY.w + ' ' + WAVE_ONLY.h);
     svg.appendChild(svgEl('path', {
-      d: wavePath(spec.wavelength, LANE.h / 2, 14, LANE.w - 14, 30),
-      fill: 'none', stroke: colour, 'stroke-width': 4, 'stroke-linecap': 'round'
+      d: wavePath(spec.wavelength, WAVE_ONLY.mid, WAVE_ONLY.from, WAVE_ONLY.to,
+                  WAVE_ONLY.amp),
+      fill: 'none', stroke: colour, 'stroke-width': 5, 'stroke-linecap': 'round'
     }));
     lane.appendChild(svg);
+    /* The label goes above the wave and the energy below it, both centred on
+       the wave rather than ranged left against nothing. */
     result.textContent = resultText(spec, r);
+    lane.appendChild(result);
     return lane;
   }
 
@@ -344,8 +360,10 @@ function resultText(spec, r) {
 const SPECTRUM = { from: 380, to: 720, marks: [400, 450, 500, 550, 600, 650, 700] };
 
 function buildSpectrum() {
-  const W = 520, H = 230;
-  const x0 = 54, x1 = W - 20, barY = 96, barH = 40;
+  /* Wider than the strip needs, because what sits OUTSIDE each end of it
+     matters: the visible band is a window, and saying so costs two words. */
+  const W = 580, H = 230;
+  const x0 = 96, x1 = W - 96, barY = 96, barH = 40;
   const at = w => x0 + (w - SPECTRUM.from) / (SPECTRUM.to - SPECTRUM.from) * (x1 - x0);
 
   const svg = svgEl('svg', {
@@ -387,8 +405,14 @@ function buildSpectrum() {
     svg.appendChild(text(x, barY + barH + 24,
       physics(w, 50, 2.30).energy.toFixed(2), 'sp-ev'));
   });
-  svg.appendChild(text(x0 - 8, barY - 12, 'nm', 'sp-unit', 'end'));
-  svg.appendChild(text(x0 - 8, barY + barH + 24, 'eV', 'sp-unit', 'end'));
+  svg.appendChild(text(x0 - 48, barY - 12, 'nm', 'sp-unit', 'end'));
+  svg.appendChild(text(x0 - 48, barY + barH + 24, 'eV', 'sp-unit', 'end'));
+
+  /* The strip is only the part we can see. Both neighbours are on the same
+     line it is, which is the point: nothing changes at either edge except
+     whether an eye happens to respond. */
+  svg.appendChild(text(x0 - 10, barY + barH / 2 + 6, 'UV', 'sp-edge', 'end'));
+  svg.appendChild(text(x1 + 10, barY + barH / 2 + 6, 'Infrared', 'sp-edge', 'start'));
 
   /* The two directions. This is the part people get backwards. */
   const arrow = (y, dir, label) => {
@@ -431,7 +455,7 @@ function buildCard(card) {
      now a tall picture: light coming down onto a surface and electrons
      leaving it. Stacked, three of those would be three slivers. */
   const lanes = document.createElement('div');
-  lanes.className = 'lanes';
+  lanes.className = 'lanes' + (card.stack ? ' stack' : '');
   card.lanes.forEach(spec => lanes.appendChild(buildLane(spec)));
 
   if (card.aside === 'spectrum') {
@@ -482,6 +506,10 @@ function ANIMATIONS(part) {
       { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Violet', show: 'energy' }
     ],
     aside: 'spectrum',
+    /* Side by side these two would be 281px each next to a spectrum, and the
+       whole point is how many periods fit across. Stacked, each one gets the
+       full width of the half it shares with the strip. */
+    stack: true,
     /* "Same beam, different photons" was simply untrue: these are two
        different beams. What is actually being shown is that the colour, and
        nothing else, fixes what one photon is worth. */

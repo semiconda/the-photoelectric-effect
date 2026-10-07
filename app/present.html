@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '17';
+const BUILD = '18';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=17">
+<link rel="stylesheet" href="theme.css?v=18">
 <style>
 html, body { height: 100%; }
 
@@ -200,6 +200,8 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .sp-ev   { fill: var(--chalk-cyan); font-family: var(--ink); font-size: 17px; font-weight: 600; }
 .sp-unit { fill: var(--chalk-dim); font-family: var(--ink); font-size: 15px; }
 .sp-dir  { fill: var(--chalk-dim); font-family: var(--ink); font-size: 16px; }
+.sp-edge { fill: var(--chalk-dim); font-family: var(--ink); font-size: 16px;
+           font-style: italic; }
 
 /* The cases sit side by side. Each one is a tall picture now - light coming
    down onto a surface, electrons leaving it - and three of those stacked
@@ -209,6 +211,19 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
    separates nothing from anything. */
 .lanes { display: flex; flex: 1 1 auto; min-height: 0;
          gap: clamp(10px, 1.4vw, 30px); align-items: stretch; }
+
+/* A card that asks for it keeps its cases stacked - slide 1, where the two
+   waves want width far more than they want to be beside each other. */
+.lanes.stack { flex-direction: column; }
+.lanes.stack .lane + .lane { border-left: none; padding-left: 0;
+                             border-top: 1px solid var(--rule-soft);
+                             padding-top: .3em; }
+
+/* A wave with no metal under it: label above, energy below, both centred on
+   the wave instead of ranged left against nothing. */
+.lane.bare { justify-content: center; }
+.lane.bare .lane-head { align-items: center; text-align: center; }
+.lane.bare .lane-result { text-align: center; }
 .lane { flex: 1 1 0; min-width: 0; min-height: 0;
         display: flex; flex-direction: column; gap: .15em; }
 .lane + .lane { border-left: 1px solid var(--rule-soft);
@@ -573,7 +588,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=17" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=18" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -644,10 +659,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=17"></script>
-<script src="questions.js?v=17"></script>
-<script src="anim.js?v=17"></script>
-<script src="live.js?v=17"></script>
+<script src="physics.js?v=18"></script>
+<script src="questions.js?v=18"></script>
+<script src="anim.js?v=18"></script>
+<script src="live.js?v=18"></script>
 <script>
 const $ = id => document.getElementById(id);
 
