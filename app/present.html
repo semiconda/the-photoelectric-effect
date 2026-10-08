@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '29';
+const BUILD = '30';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=29">
+<link rel="stylesheet" href="theme.css?v=30">
 <style>
 html, body { height: 100%; }
 
@@ -428,8 +428,15 @@ body.asking .parts > .slot:not(#question) { display: none; }
 /* Fills the box it is given and keeps its shape inside it, rather than
    deriving a height from its width and then being clamped. */
 /* flex: 1 1 0, not height: 100%. At 100% the canvas claimed the whole board
-   and the status line underneath it was pushed out of the bottom. */
-#toyboard canvas { display: block; flex: 1 1 0; min-height: 0; width: 100%;
+   and the status line underneath it was pushed out of the bottom.
+
+   width: auto, so the element is only as wide as its own proportions need.
+   With no frame around it any more there is nothing to show how wide the
+   canvas is, so a full-width element just letterboxed the drawing inside
+   invisible margins; sized to its content it sits centred on the paper and
+   the picture is the same size either way. */
+#toyboard canvas { display: block; flex: 1 1 0; min-height: 0;
+                   width: auto; max-width: 100%;
                    object-fit: contain; border-radius: 12px;
                    touch-action: none; }
 /* On paper now, not on slate. */
@@ -738,7 +745,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=29" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=30" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -808,7 +815,7 @@ body.joining #joined { color: var(--ink-soft); }
          so a frame around it was a second border around a border. Rounded
          corners and nothing else. -->
     <div id="toyboard">
-      <canvas id="scene" tabindex="0" width="1200" height="480"
+      <canvas id="scene" tabindex="0" width="560" height="480"
               aria-label="A laser at 45 degrees on a metal surface. Electrons leave
                           the surface only when each photon carries more than the
                           work function"></canvas>
@@ -868,11 +875,11 @@ body.joining #joined { color: var(--ink-soft); }
 
 </main>
 
-<script src="physics.js?v=29"></script>
-<script src="questions.js?v=29"></script>
-<script src="anim.js?v=29"></script>
-<script src="toy.js?v=29"></script>
-<script src="live.js?v=29"></script>
+<script src="physics.js?v=30"></script>
+<script src="questions.js?v=30"></script>
+<script src="anim.js?v=30"></script>
+<script src="toy.js?v=30"></script>
+<script src="live.js?v=30"></script>
 <script>
 const $ = id => document.getElementById(id);
 

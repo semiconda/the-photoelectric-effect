@@ -116,7 +116,7 @@ const QUESTIONS = [
       return increases === compared ? 'It increases.' : null;
     },
     why: 'Shorter wavelengths provide more energy per photon, leaving more energy '
-       + 'for the emitted electron’s motion — and this holds for every metal, '
+       + 'for the emitted electron’s motion. This holds for every metal, '
        + 'not just this one.'
   },
   {
@@ -148,7 +148,7 @@ const QUESTIONS = [
       return 'Nothing changes.';
     },
     why: 'Each copper photon is still worth 3.10 eV against a 4.70 eV barrier. '
-       + 'Sending more of them only sends more photons that cannot get in.'
+       + 'Sending more of them only sends more photons that cannot free an electron.'
   }
 ];
 
