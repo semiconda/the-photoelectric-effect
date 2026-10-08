@@ -1,6 +1,8 @@
 /* The Photoelectric Effect — the quiz questions.
  *
- * Four questions. Q2 was cut, so slides 2 and 4 run without one. The talk runs three times in ten minutes,
+ * Four questions, numbered Q1 to Q4 with no gaps - two earlier ones were
+ * cut, and a button bar that reads Q1 Q3 Q4 Q5 invites the question of where
+ * the missing one went. Slides 2 and 4 carry none. The talk runs three times in ten minutes,
  * poster-session style, so each one has about twenty seconds. Loaded by
  * present.html and quiz.html. Classic script, like physics.js — see the note
  * there.
@@ -59,7 +61,7 @@ const QUESTIONS = [
        + 'Brightness changes how MANY photons arrive, never how much energy each one has.'
   },
   {
-    id: 'Q3', part: 3,
+    id: 'Q2', part: 3,
     text: '700 nm red light does not release electrons from sodium. '
         + 'Which change will help?',
     options: [
@@ -87,7 +89,7 @@ const QUESTIONS = [
        + 'holds its electrons more tightly only makes it harder.'
   },
   {
-    id: 'Q4', part: 3,
+    id: 'Q3', part: 3,
     text: 'Electrons are already escaping. We shorten the wavelength while '
         + 'keeping the same metal. What happens to their maximum speed?',
     options: [
@@ -121,7 +123,7 @@ const QUESTIONS = [
     /* Asked on the metal slide, about the metal that does nothing. Slide 4
        showed brightness mattering; this asks what brightness is worth when
        the photon cannot pay the entrance fee in the first place. */
-    id: 'Q5', part: 5,
+    id: 'Q4', part: 5,
     text: 'Copper is not emitting electrons. We keep the wavelength fixed and '
         + 'increase the light intensity. What changes?',
     options: [
