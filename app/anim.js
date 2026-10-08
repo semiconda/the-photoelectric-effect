@@ -108,46 +108,61 @@ function labelColor(w) { return spectralColor(w, 0.45); }
    and leaves 65px of the cell empty on either side, so everything in it is
    smaller than the space allows. Matching the aspect spends that width on a
    longer beam and a wider slab instead. */
-const LANE = {
-  w: 360, h: 220,                 /* a tall cell: the cases now sit side by side */
-  slabX: 8, slabW: 344, slabH: 32,
-  surfaceY: 170,          /* the lit face: where light lands and electrons leave */
-  impactX: 120,           /* where the beam meets it */
-  beamAngle: 225,         /* degrees - down and to the right, onto the surface */
-  beamLen: 165,
-  emitMin: 185, emitMax: 338,   /* electrons leave to the RIGHT of the beam, so
-                                   the two never cross */
-  travel: 190             /* clear off the top, so the loop is never seen */
-};
+/* The drawing is shaped to the cell it will land in.
+ *
+ * A picture in a box that is not its shape renders at min(W/vw, H/vh) and
+ * leaves the rest of the box empty, so the aspect is worth getting right.
+ * Measured: a card with two cases gives each one a box of about 1.85:1, a
+ * card with three gives about 1.20:1. One viewBox cannot serve both - at 360
+ * wide the three-lane card drew at scale 1.06 and the two-lane card wasted
+ * 80px of width - so the width comes from the lane count and everything in
+ * the drawing is placed from it.
+ *
+ * Height stays at 220 throughout, so electrons rise the same distance and
+ * surfaces sit at the same level whichever card they are on. */
+function laneGeom(w) {
+  const impactX = Math.round(w * 0.33);
+  /* Long enough to read as a beam, short enough that a 45-degree approach
+     still starts inside the box. */
+  const beamLen = Math.round(Math.min(165, (impactX - 12) / 0.7071));
+  return {
+    w: w, h: 220,
+    slabX: 8, slabW: w - 16, slabH: 32,
+    surfaceY: 170,        /* the lit face: light lands, electrons leave */
+    impactX: impactX,
+    beamAngle: 225,       /* down and to the right, onto the surface */
+    beamLen: beamLen,
+    packetLen: Math.round(Math.min(62, beamLen * 0.5)),
+    emitMin: impactX + 52, emitMax: w - 22,
+    travel: 190           /* clear off the top, so the loop is never seen */
+  };
+}
+/* Two cases a card, or three. */
+function laneWidthFor(count) { return count >= 3 ? 270 : 400; }
+
+/* A photon in flight: how long one takes to cross, and how much of the beam
+   it occupies. The flight time is the same for every colour, because the
+   speed of light is - only the electron's flight depends on energy.
+
+   The flight is deliberately the longer half of the cycle: a photon that is
+   only on screen for a third of it leaves the beam looking empty, and the
+   beam is where "how many" is read. Its LENGTH comes from the geometry, in
+   laneGeom(), because a packet sized for a long beam does not fit a short
+   one. */
+const PACKET = { flight: 1.7 };
 
 /* Slide 1's lane has no metal in it, so it has no use for a tall cell. Its
    own box is long and shallow, which is the shape a wave wants.
- *
- * HOW MANY CYCLES. The period cannot come from the same formula the beam
- * uses: that one is tuned to a 107-unit stretch of beam, and across 580 units
- * it drew nineteen cycles of red and THIRTY-THREE of violet. At that density
- * neither is a wave any more, they are both a solid block of ink, and the one
- * thing the slide exists to show - that one is tighter than the other - is
- * the first thing to disappear. Seven cycles of red reads as a wave; violet
- * keeps the exact ratio, so it comes out at 700/400 of that, and the
- * comparison survives being legible.
- *
- * AND IT MOVES. Both waves scroll at the SAME speed, because light does: what
- * differs is how many crests go past in a second. That is c = lambda f drawn
- * rather than asserted - the violet wave visibly cycles faster while travelling
- * no quicker. The path is drawn one period wider than the box and translated
- * by exactly one period, so the loop has no seam. */
-/* The proportions are measured, not guessed: the cell this lands in comes out
-   607x73, so an 8.3:1 box fills it. At 600x80 it was height-limited and drew
-   546px wide inside 607 - a tenth of the width given away for nothing. */
-/* A photon in flight: a short wave train, and how long one takes to cross.
-   The flight time is the same for every colour, because the speed of light
-   is - only the electron's flight depends on energy. */
-/* The flight is deliberately the longer half of the cycle: a photon that is
-   only on screen for a third of it leaves the beam looking empty, and the
-   beam is where "how many" is read. */
-const PACKET = { len: 62, flight: 1.7 };
 
+   The period cannot come from the beam's formula: that one is tuned to a
+   short stretch of beam, and across 580 units it drew nineteen cycles of red
+   and thirty-three of violet, which is not two waves but two blocks of ink.
+   Seven cycles of red reads as a wave; violet keeps the exact ratio, so the
+   comparison survives being legible.
+
+   And it moves. Both waves scroll at the SAME speed, because light does:
+   what differs is how many crests go past in a second, which is c = lambda f
+   drawn rather than asserted. */
 const WAVE_ONLY = {
   w: 600, h: 72, mid: 36, amp: 62,
   stepAt700: 41,        /* half-period of the red wave: seven cycles across */
@@ -301,6 +316,7 @@ function dotDuration(r) {
 
 /* One lane: the light, the plate, and what comes off it. */
 function buildLane(spec) {
+  const G = laneGeom(spec.laneW || 400);
   /* The work function is looked up from the material's NAME through
      phiOf(), so a lane cannot draw a metal the simulation does not have, and
      cannot draw it with a phi the quiz is not scored against. */
@@ -350,17 +366,20 @@ function buildLane(spec) {
     cmp.textContent = (r.emits ? '> ' : '< ') + r.phi.toFixed(2) + ' eV';
     name.appendChild(cmp);
   }
-  head.appendChild(name);
-
+  /* Kmax goes on the END of the same line, not on one of its own. The row
+     then reads straight through: this colour, this much energy, against this
+     barrier, leaving this much. It wraps by itself on a card narrow enough
+     to need it, which is the old two-line layout back again. */
   const result = document.createElement('div');
   result.className = 'lane-result';
   result.textContent = resultText(spec, r);
-  head.appendChild(result);
+  name.appendChild(result);
 
+  head.appendChild(name);
   lane.appendChild(head);
 
   const svg = svgEl('svg', {
-    viewBox: '0 0 ' + LANE.w + ' ' + LANE.h,
+    viewBox: '0 0 ' + G.w + ' ' + G.h,
     role: 'img',
     'aria-label': spec.label + ': ' + resultText(spec, r)
   });
@@ -398,16 +417,16 @@ function buildLane(spec) {
      what makes it read as a surface rather than a coloured rectangle. */
   const metal = metalLook(spec.material);
   svg.appendChild(svgEl('rect', {
-    x: LANE.slabX, y: LANE.surfaceY, width: LANE.slabW, height: LANE.slabH,
+    x: G.slabX, y: G.surfaceY, width: G.slabW, height: G.slabH,
     rx: 3, fill: metal.body
   }));
   svg.appendChild(svgEl('rect', {
-    x: LANE.slabX, y: LANE.surfaceY, width: LANE.slabW, height: 10,
+    x: G.slabX, y: G.surfaceY, width: G.slabW, height: 10,
     fill: metal.face
   }));
   svg.appendChild(svgEl('line', {
-    x1: LANE.slabX, x2: LANE.slabX + LANE.slabW,
-    y1: LANE.surfaceY + 1, y2: LANE.surfaceY + 1,
+    x1: G.slabX, x2: G.slabX + G.slabW,
+    y1: G.surfaceY + 1, y2: G.surfaceY + 1,
     stroke: metal.edge, 'stroke-width': 2.4
   }));
 
@@ -440,7 +459,7 @@ function buildLane(spec) {
      all travel at the same speed. Only the electron's flight depends on what
      it was given.
    *
-   * THE CYCLE BELONGS TO THE CARD, NOT THE LANE. A photon is only on screen
+   * THE CYCLE BELONGS TO THE CARD, NOT THE G. A photon is only on screen
    * while it is in flight, so the share of a lane's packets visible at any
    * moment is flight/cycle. Let each lane set its own cycle and that share
    * changes from lane to lane: on slide 3 the slow green lane would have
@@ -453,16 +472,16 @@ function buildLane(spec) {
   const land   = PACKET.flight / cycle * 100;
   const done   = (PACKET.flight + escape) / cycle * 100;
 
-  keyframesFor(id, land, done, LANE.beamLen - PACKET.len, LANE.travel);
+  keyframesFor(id, land, done, G.beamLen - G.packetLen, G.travel);
 
   const beam = svgEl('g', {
-    transform: 'translate(' + LANE.impactX + ',' + LANE.surfaceY + ') '
-             + 'rotate(' + LANE.beamAngle + ')'
+    transform: 'translate(' + G.impactX + ',' + G.surfaceY + ') '
+             + 'rotate(' + G.beamAngle + ')'
   });
   for (let i = 0; i < arrivals; i++) {
     const pk = svgEl('path', {
       class: 'pk',
-      d: wavePath(spec.wavelength, 0, 4, PACKET.len, 22,
+      d: wavePath(spec.wavelength, 0, 4, G.packetLen, 22,
                   Math.max(5, Math.min(13, spec.wavelength / 46))),
       fill: 'none', stroke: colour, 'stroke-width': 3.4, 'stroke-linecap': 'round'
     });
@@ -480,7 +499,11 @@ function buildLane(spec) {
      and the shared phase buy. */
   if (n === 0) {
     svg.appendChild(svgEl('path', {
-      d: 'M 216 94 l 52 52 m 0 -52 l -52 52',
+      d: (function () {
+        const cx = (G.emitMin + G.emitMax) / 2, cy = 118, k = 26;
+        return 'M ' + (cx - k) + ' ' + (cy - k) + ' l ' + (2 * k) + ' ' + (2 * k)
+             + ' m 0 -' + (2 * k) + ' l -' + (2 * k) + ' ' + (2 * k);
+      })(),
       fill: 'none', stroke: 'var(--no-emit)', 'stroke-width': 4.4,
       'stroke-linecap': 'round', opacity: '.85'
     }));
@@ -490,7 +513,7 @@ function buildLane(spec) {
          stack into what looks like a single dot. */
       const dx = ((i % 5) - 2) * 9;
       const dot = svgEl('circle', {
-        class: 'e', cx: LANE.impactX + dx, cy: LANE.surfaceY - 9, r: 6.5,
+        class: 'e', cx: G.impactX + dx, cy: G.surfaceY - 9, r: 6.5,
         fill: 'var(--emit)'
       });
       dot.style.animationName = 'el-' + id;
@@ -654,8 +677,10 @@ function buildCard(card) {
      it and no lane's photons are on screen less often than its neighbour's. */
   const cycle = PACKET.flight + Math.max.apply(null, card.lanes.map(l =>
     escapeTime(physics(l.wavelength, l.intensity, phiOf(l.material)))));
-  card.lanes.forEach(spec => lanes.appendChild(
-    buildLane(Object.assign({ cycle: cycle }, anyFoot ? { footRow: true } : null, spec))));
+  const laneW = laneWidthFor(card.lanes.length);
+  card.lanes.forEach(spec => lanes.appendChild(buildLane(
+    Object.assign({ cycle: cycle, laneW: laneW },
+                  anyFoot ? { footRow: true } : null, spec))));
 
   if (card.aside === 'spectrum') {
     /* Cases on the left, the reference strip on the right. */
