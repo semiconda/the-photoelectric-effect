@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '33';
+const BUILD = '35';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=33">
+<link rel="stylesheet" href="theme.css?v=35">
 <style>
 html, body { height: 100%; }
 
@@ -445,8 +445,19 @@ body.asking .parts > .slot:not(#question) { display: none; }
 /* The middle column. A fixed measure rather than a share: these are six
    controls read one under the other, and a column that grows with the window
    only makes the sliders longer, which tells you nothing. */
-.toypanel { flex: 0 1 17em; min-width: 0; display: flex;
-            flex-direction: column; justify-content: center; }
+/* 17em of controls plus the padding the rule needs; box-sizing is
+   border-box here, so a flat 17em basis would have spent the padding out of
+   the sliders. */
+.toypanel { flex: 0 1 calc(17em + clamp(14px, 1.8vw, 40px)); min-width: 0; display: flex;
+            flex-direction: column; justify-content: center;
+            /* Where the slide changes subject: the scores on one side, the
+               apparatus on the other. A single hairline, in the colour of the
+               paper's own ruling, so it reads as part of the sheet rather
+               than as a border someone drew. The margin and the padding are
+               equal, so the line sits midway in the space it opens. */
+            margin-left: clamp(14px, 1.8vw, 40px);
+            padding-left: clamp(14px, 1.8vw, 40px);
+            border-left: 1px solid var(--paper-rule); }
 
 /* The three numbers the apparatus is really about, in one row under the
    sentence that interprets them. */
@@ -525,7 +536,15 @@ body.joining .joinqr { right: 5vw; bottom: 50%; transform: translateY(50%); opac
 body.joining .joinqr img { width: clamp(190px, 21vw, 290px); height: clamp(190px, 21vw, 290px); }
 body.joining .joinqr span { font-size: 16px; }
 body.joining .stage { padding-right: clamp(240px, 28vw, 380px); }
-.roombox { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+/* The title, then the subtitle, then the count - largest to smallest, with
+   the room's own line last because it is the only part that changes. */
+.roombox { display: flex; flex-direction: column; align-items: center; gap: 10px;
+           text-align: center; }
+.bigtitle { margin: 0; font-size: clamp(34px, 5.2vw, 76px); line-height: 1.05;
+            color: var(--ink-dark); }
+.bigsub { margin: 0 0 .4em; max-width: 22em;
+          font-family: var(--hand); font-size: clamp(18px, 2.2vw, 34px);
+          line-height: 1.2; color: var(--accent-ink); }
 .joined { font-family: var(--hand); font-size: clamp(22px, 2.8vw, 40px);
           color: var(--chalk-dim); }
 
@@ -541,9 +560,12 @@ body.finale #finale { display: flex; }
    One slide, because they are one moment: who won, and something to go and
    try. Sized in em from a single number so the whole thing shrinks together
    when a short screen or a long leaderboard asks it to. */
+/* The gap here is the SMALL one - between the controls and the picture they
+   drive, which are one thing. The scores are a different subject entirely,
+   so the extra room, and the rule, go on the left of the controls instead. */
 #finale { display: none; flex: 1 1 auto; min-height: 0; overflow: hidden;
           flex-direction: row; align-items: stretch;
-          gap: clamp(16px, 2vw, 44px);
+          gap: clamp(10px, 1.1vw, 24px);
           font-size: calc(clamp(12px, 1.15vw, 17px) * var(--fit, 1)); }
 
 /* A column wide enough for a name and a score. Left to size itself from its
@@ -760,7 +782,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=33" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=35" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -783,6 +805,11 @@ body.joining #joined { color: var(--ink-soft); }
            to be told a number it cannot act on. What the room DOES want to
            see is whether anyone has got in yet. -->
       <div class="roombox" id="roombox" hidden>
+        <!-- The subject, on the one slide that has the room's attention and
+             nothing else to say. The head bar reads "Join", which tells you
+             what to do but not what you are joining. -->
+        <h2 class="bigtitle">The photoelectric effect</h2>
+        <p class="bigsub">or, how light knocks electrons out of metal</p>
         <div class="joined" id="joined"></div>
       </div>
     </div>
@@ -852,11 +879,15 @@ body.joining #joined { color: var(--ink-soft); }
           <input id="work" type="range" min="1.5" max="6" step="0.01" value="2.3">
         </div>
 
+        <!-- Above the buttons: it is the last thing the three sliders decide
+             between them, so it belongs with them. The buttons are not
+             settings at all - they stop and start the picture. -->
+        <p class="small">Threshold wavelength <strong id="threshold"></strong></p>
+
         <div class="toybuttons">
           <button id="laserPower" type="button" aria-pressed="true">Turn laser off</button>
           <button id="pause" type="button">Pause animation</button>
         </div>
-        <p class="small">Threshold wavelength <strong id="threshold"></strong></p>
       </div>
     </div>
 
@@ -901,11 +932,11 @@ body.joining #joined { color: var(--ink-soft); }
 
 </main>
 
-<script src="physics.js?v=33"></script>
-<script src="questions.js?v=33"></script>
-<script src="anim.js?v=33"></script>
-<script src="toy.js?v=33"></script>
-<script src="live.js?v=33"></script>
+<script src="physics.js?v=35"></script>
+<script src="questions.js?v=35"></script>
+<script src="anim.js?v=35"></script>
+<script src="toy.js?v=35"></script>
+<script src="live.js?v=35"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -1280,12 +1311,10 @@ function fitFinale() {
   const over = () => {
     if (box.scrollHeight > box.clientHeight + 1) return true;
     if (!ctl) return false;
-    const kids = Array.prototype.filter.call(ctl.children,
-      el => el.getBoundingClientRect().height > 0);
-    if (!kids.length) return false;
-    const span = kids[kids.length - 1].getBoundingClientRect().bottom
-               - kids[0].getBoundingClientRect().top;
-    return span > ctl.parentNode.clientHeight - 2;
+    /* The column itself, not the span of its children: the children's margins
+       fall outside first-top-to-last-bottom, which read 294 in a 296 slot
+       while the column was really 298 and hanging 1px off each end. */
+    return ctl.getBoundingClientRect().height > ctl.parentNode.clientHeight - 2;
   };
   let fit = 1;
   box.style.setProperty('--fit', '1');
@@ -1477,8 +1506,11 @@ function paintBoard(rows) {
     /* textContent, never innerHTML: these names were typed by the audience, and
        a name containing markup must never become markup on the projector. */
     name.textContent = r.display;
+    /* Out of how many, so "2" on the projector is not read as a score. The
+       denominator is QUESTIONS.length, never typed - cut a question and this
+       follows it. */
     score.textContent = typeof r.correct === 'number'
-      ? r.score.toLocaleString() + '  (' + r.correct + ')'
+      ? r.score.toLocaleString() + '  (' + r.correct + '/' + QUESTIONS.length + ')'
       : r.score;
     li.appendChild(name); li.appendChild(score);
     board.appendChild(li);
