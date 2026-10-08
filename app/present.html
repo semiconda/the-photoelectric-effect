@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '25';
+const BUILD = '26';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=25">
+<link rel="stylesheet" href="theme.css?v=26">
 <style>
 html, body { height: 100%; }
 
@@ -370,6 +370,77 @@ body.asking .parts > .slot:not(#question) { display: none; }
   .choice.correct { background: var(--board-panel); }
 }
 
+/* ---- The apparatus ------------------------------------------------------
+   The canvas sits on a blackboard, because it paints its own dark ground and
+   because that is where every other picture in this talk has been. Everything
+   you can read sits on the paper in ink, because that is where every other
+   readable thing has been. The slide is new; none of its parts are. */
+/* Controls beside the apparatus, not under it. The canvas is 880x460, near
+   enough 2:1; a projector is 16:9. Stacked, the board came out 1477x375 and
+   the drawing had to shrink to a third of the width to keep its shape. Side
+   by side it gets 950x700, which is almost exactly its own proportions, and
+   it renders about half as big again. Under 1100px they stack, where the
+   trade goes the other way. */
+/* Sized in em from one number, like the slides and the end card, so the
+   same shrink-to-fit works here. On a 1440x600 screen this part was 110px
+   off the bottom: the canvas obeys max-height, but the readouts and the
+   controls do not shrink by themselves. */
+#apparatus { display: none; flex: 1 1 auto; min-height: 0; overflow: hidden;
+             gap: 1.6em; flex-direction: row; flex-wrap: wrap;
+             align-items: stretch;
+             font-size: calc(clamp(12px, 1.15vw, 17px) * var(--fit, 1)); }
+
+#toyboard { flex: 2 1 28em; min-height: 0; min-width: 0; padding: 12px;
+            align-items: center; justify-content: center; }
+#toyboard canvas { display: block; width: 100%; height: auto;
+                   max-height: 100%; object-fit: contain; border-radius: 4px;
+                   cursor: ew-resize; touch-action: none; }
+#toyboard .status { margin: .4em 0 0; font-family: var(--hand);
+                    font-size: 1.45em; text-align: center; }
+
+.toypanel { flex: 1 1 19em; min-width: 0; display: flex; flex-direction: column;
+            align-items: stretch; gap: 1.3em; justify-content: center; }
+
+/* The three numbers the apparatus is really about. */
+.readouts { flex: none; display: flex; flex-wrap: wrap; gap: 1.2em; }
+.readouts > div { display: flex; flex-direction: column; }
+.readouts label { font-size: .82em; color: var(--ink-soft); }
+.readouts strong { font-family: var(--hand); font-size: 1.7em;
+                   color: var(--accent-ink); }
+
+.toyctl { flex: none; display: grid; gap: .3em .9em;
+          grid-template-columns: auto 1fr; align-items: center; }
+.toyctl label { font-size: 1em; color: var(--ink-dark); white-space: nowrap; }
+.toyctl output { font-family: var(--hand); color: var(--accent-ink); }
+.toyctl input[type=range] { width: 100%; accent-color: var(--accent-ink); }
+.toyctl select { grid-column: 2; font: inherit; font-size: .95em;
+                 padding: 4px 8px; border: 1.5px solid #c8cbd0; border-radius: 7px;
+                 background: #fff; color: var(--ink-dark); }
+.toyctl #customBox { grid-column: 1 / -1; display: grid; gap: .25em .9em;
+                     grid-template-columns: auto 1fr; align-items: center; }
+.toyctl .small { grid-column: 1 / -1; margin: 0; color: var(--ink-soft);
+                 font-size: .88em; max-width: none; }
+.toyctl .small strong { color: var(--accent-ink); font-family: var(--hand); }
+.toybuttons { grid-column: 1 / -1; display: flex; gap: .6em; margin-top: .3em; }
+.toybuttons button { font-size: 1em; padding: .42em .85em;
+                     color: var(--ink-dark); background: #fff; border-color: #c8cbd0; }
+.toybuttons button:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
+
+/* The spectrum slider keeps index.html's own gradient: it is the one control
+   whose track carries information. */
+.toyctl .spectrum { appearance: none; height: 8px; border-radius: 10px;
+  background: linear-gradient(90deg,#805daf 0%,#9865ee 33%,#4286e3 45%,
+                              #77c571 54%,#e7d979 62%,#d7684f 78%,#733c38 100%); }
+
+/* max-width: none matters more than it looks. .small caps text at a readable
+   measure, and a flex item's basis is clamped by max-width BEFORE the line
+   is broken - so a 100% basis became 568px, fitted on the first line after
+   all, and left the board and the panel sharing what was left of it. */
+#apparatus .insight { flex: 1 1 100%; max-width: none; margin: 0;
+                      color: var(--ink-soft); font-size: 1em; }
+
+@media (max-width: 1100px) { #apparatus { flex-direction: column; } }
+
 /* ---- Part 9: hand over to the toy --------------------------------------- */
 /* Sized in em from one number, like the slide text, so the same shrink-to-fit
    works here. This part carries the most: a leaderboard whose height depends
@@ -397,8 +468,12 @@ body.asking .parts > .slot:not(#question) { display: none; }
 .handover .bullets li { font-size: 1.1em; }
 .handover .closing { font-size: 1.3em; margin: .25em 0 0; }
 .handover em { font-style: normal; color: var(--accent); }
-body.toy .parts { display: none; }
-body.toy #endcard { display: flex; }
+/* Two parts show neither a blackboard nor slide text: the scores, and the
+   apparatus. Each is named for what it is rather than for being last, since
+   neither is last any more. */
+body.scores .parts, body.apparatus .parts { display: none; }
+body.scores #endcard { display: flex; }
+body.apparatus #apparatus { display: flex; }
 
 .parts { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 0; }
 
@@ -423,7 +498,7 @@ body.joining .joinqr span { font-size: 16px; }
 body.joining .stage { padding-right: clamp(240px, 28vw, 380px); }
 
 /* Nothing to join once the quiz is over. */
-body.toy .joinqr { display: none; }
+body.scores .joinqr, body.apparatus .joinqr { display: none; }
 
 /* Part 0 only: which room this group is in. The presenter says the number out
    loud and the audience taps it - no URL to read out, no QR to fail. */
@@ -555,12 +630,12 @@ body {
 /* .takeover, not #question: an id inside :not() counts as an id, and this
    selector was quietly outranking every rule that tried to turn a slot off -
    which is how the join screen kept its dashed box. */
-.slot:not(.drawn):not(.filled):not(.takeover) {
+.slot:not(.drawn):not(.filled):not(.takeover):not(.blackboard) {
   background: none; box-shadow: none; border: 2px dashed var(--paper-edge);
   color: var(--ink-soft);
 }
-.slot:not(.drawn):not(.filled):not(.takeover) .what,
-.slot:not(.drawn):not(.filled):not(.takeover) .note { color: var(--ink-soft); }
+.slot:not(.drawn):not(.filled):not(.takeover):not(.blackboard) .what,
+.slot:not(.drawn):not(.filled):not(.takeover):not(.blackboard) .note { color: var(--ink-soft); }
 
 /* ---- The join screen ----------------------------------------------------
    Nothing is being explained yet, so there is nothing to put on a blackboard
@@ -642,7 +717,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=25" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=26" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -680,6 +755,78 @@ body.joining #joined { color: var(--ink-soft); }
 
   </div>
 
+  <!-- ===== The apparatus =================================================
+       index.html's simulation, on this page's sheet. The canvas goes on a
+       blackboard because it paints its own dark ground and because that is
+       where every other picture in this talk has been; the controls go on
+       the paper in ink, because that is where every other thing you can read
+       has been.
+
+       The six hidden stubs at the end are not decoration. The script drives
+       sections of index.html this slide does not carry - energy bars, the
+       Kmax-against-frequency graph, the comparison cards - and writing into
+       something that is not there would stop it dead. With the stubs present
+       it runs exactly as it does on its own page, unedited. -->
+  <div id="apparatus">
+    <!-- NOT class="board": that is the leaderboard, and it carries
+         width: min(520px, 100%), which quietly held this one to 520px. -->
+    <div class="slot blackboard" id="toyboard">
+      <canvas id="scene" tabindex="0" width="880" height="460"
+              aria-label="Interactive laser pointer: drag to aim at the metal surface,
+                          or use left and right arrow keys. Electrons escape only above
+                          the energy threshold"></canvas>
+      <p class="status" id="status" role="status"></p>
+    </div>
+
+    <div class="toypanel">
+      <div class="readouts">
+        <div><label>Photon energy</label><strong id="energy"></strong></div>
+        <div><label>Maximum kinetic energy K<sub>max</sub></label><strong id="kinetic"></strong></div>
+        <div><label>Relative emission rate</label><strong id="rate"></strong></div>
+      </div>
+
+      <div class="toyctl">
+        <label for="wave">Wavelength <output id="waveValue"></output></label>
+        <input id="wave" class="spectrum" type="range" min="180" max="800" step="1" value="400">
+
+        <label for="intensity">Brightness <output id="intensityValue"></output></label>
+        <input id="intensity" type="range" min="0" max="100" value="50">
+
+        <label for="material">Metal</label>
+        <select id="material">
+          <option value="2.30">Sodium &middot; 2.30 eV</option>
+          <option value="2.14">Cesium &middot; 2.14 eV</option>
+          <option value="4.30">Zinc &middot; 4.30 eV</option>
+          <option value="4.70">Copper &middot; 4.70 eV</option>
+          <option value="custom">Custom work function</option>
+        </select>
+        <div id="customBox" hidden>
+          <label for="work">Work function <output id="workValue"></output></label>
+          <input id="work" type="range" min="1.5" max="6" step="0.01" value="2.3">
+        </div>
+
+        <label for="angle">Angle <output id="angleValue">68.0&deg;</output></label>
+        <input id="angle" type="range" min="58" max="76" step="0.1" value="68">
+
+        <div class="toybuttons">
+          <button id="laserPower" type="button" aria-pressed="true">Turn laser off</button>
+          <button id="pause" type="button">Pause animation</button>
+        </div>
+        <p class="small" id="frequency"></p>
+        <p class="small">Threshold wavelength <strong id="threshold"></strong></p>
+      </div>
+    </div>
+
+    <p class="small insight" id="insight"></p>
+
+    <!-- Written to by the script, belonging to sections this slide does not
+         have. Present so it can run untouched. -->
+    <div hidden>
+      <div id="bars"></div><svg id="graph"></svg><div id="calculation"></div>
+      <div id="balance"></div><button id="comparePause"></button><button id="reset"></button>
+    </div>
+  </div>
+
   <div id="endcard">
     <!-- Two columns on a wide screen: the scores on one side, the hand-over to
          the toy on the other. Stacked, a full leaderboard plus slide 5 is
@@ -708,15 +855,16 @@ body.joining #joined { color: var(--ink-soft); }
       escape. Extra photon energy decides <em>how fast</em>.</p>
     </div>
 
-    <a class="btn" href="index.html">Open the simulation and play &rarr;</a>
+      <p class="small">The apparatus is on the next slide.</p>
     </div>
   </div>
 </main>
 
-<script src="physics.js?v=25"></script>
-<script src="questions.js?v=25"></script>
-<script src="anim.js?v=25"></script>
-<script src="live.js?v=25"></script>
+<script src="physics.js?v=26"></script>
+<script src="questions.js?v=26"></script>
+<script src="anim.js?v=26"></script>
+<script src="toy.js?v=26"></script>
+<script src="live.js?v=26"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -843,7 +991,11 @@ const PARTS = [
 
   /* Slide 5's text is in the end card, not here: the slots are hidden on this
      part so the scores can have the screen. */
-  { title: 'Take control of the experiment' }
+  { title: 'Take control of the experiment', scores: true },
+
+  /* The apparatus. Its markup lives outside PARTS because it is a fixed
+     piece of furniture rather than something painted from data. */
+  { title: 'Your turn', toy: true }
 ];
 
 /* Each part asks questions.js what it carries, rather than being told. */
@@ -1076,7 +1228,8 @@ function watchFit() {
   const card = $('endcard');
   const refit = () => {
     if (box.classList.contains('filled')) fitExplanation(box);
-    if (document.body.classList.contains('toy')) shrinkToFit(card);
+    if (document.body.classList.contains('scores')) shrinkToFit(card);
+    if (document.body.classList.contains('apparatus')) shrinkToFit($('apparatus'));
   };
 
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
@@ -1095,6 +1248,7 @@ function watchFit() {
     });
     ro.observe(box);
     ro.observe(card);
+    ro.observe($('apparatus'));
   }
 }
 
@@ -1110,10 +1264,19 @@ function render() {
   $('animation').classList.toggle('drawn', paintAnimationInto($('anim'), part));
   paintExplanation(p);
 
-  document.body.classList.toggle('toy', part === PARTS.length - 1);
+  document.body.classList.toggle('scores', !!p.scores);
+  document.body.classList.toggle('apparatus', !!p.toy);
   /* The end card carries the most of any part and its height depends on how
      many people played, so it is fitted like the slide text. */
-  if (part === PARTS.length - 1) shrinkToFit($('endcard'));
+  if (p.scores) shrinkToFit($('endcard'));
+  /* Built the first time it is reached, not on page load: an animation loop
+     painting a canvas nobody can see is six parts of wasted work. */
+  if (p.toy) {
+    if (window.Toy) Toy.boot();
+    /* Fitted like everything else, and after the boot, since an unbuilt
+       apparatus has no readouts in it to measure. */
+    shrinkToFit($('apparatus'));
+  }
   document.body.classList.toggle('joining', part === 0);
   if (typeof paintLive === 'function') paintLive();
   $('prev').disabled = part === 0;
@@ -1212,7 +1375,7 @@ function paintBoard(rows) {
 
   /* Twelve names take more room than two. The board is painted from the
      server, so this is the moment its height changes. */
-  if (document.body.classList.contains('toy')) {
+  if (document.body.classList.contains('scores')) {
     requestAnimationFrame(() => shrinkToFit($('endcard')));
   }
   rows.forEach(r => {
