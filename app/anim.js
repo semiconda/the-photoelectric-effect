@@ -220,20 +220,33 @@ function laneStyle() {
   return el;
 }
 
-function keyframesFor(id, landPct, startX, travel) {
-  const f = landPct.toFixed(2);
-  const g = Math.min(landPct + 0.4, 99).toFixed(2);
+function keyframesFor(id, landPct, donePct, startX, travel) {
+  const f  = landPct.toFixed(2);
+  const f1 = Math.min(landPct + 0.4, 99).toFixed(2);
+  const d  = Math.min(donePct, 99.2).toFixed(2);
+  const d1 = Math.min(donePct + 0.4, 99.6).toFixed(2);
   laneStyle().textContent +=
     '@keyframes pk-' + id + '{' +
       '0%{transform:translateX(' + startX + 'px);opacity:1}' +
       f + '%{transform:translateX(0px);opacity:1}' +
-      g + '%{transform:translateX(0px);opacity:0}' +
+      f1 + '%{transform:translateX(0px);opacity:0}' +
       '100%{transform:translateX(0px);opacity:0}}' +
+    /* The electron finishes when IT finishes, not when the cycle does. That
+       is what makes one lane's electrons visibly quicker than another's
+       while every lane keeps the same cycle. */
     '@keyframes el-' + id + '{' +
       '0%{transform:translateY(0px);opacity:0}' +
       f + '%{transform:translateY(0px);opacity:0}' +
-      g + '%{transform:translateY(0px);opacity:1}' +
-      '100%{transform:translateY(-' + travel + 'px);opacity:1}}';
+      f1 + '%{transform:translateY(0px);opacity:1}' +
+      d + '%{transform:translateY(-' + travel + 'px);opacity:1}' +
+      d1 + '%{transform:translateY(-' + travel + 'px);opacity:0}' +
+      '100%{transform:translateY(-' + travel + 'px);opacity:0}}';
+}
+
+/* How long this lane's electron takes to cross. Lanes with nothing coming
+   out still need a number, because the cycle has to close. */
+function escapeTime(r) {
+  return r.emits ? 1.273 / Math.sqrt(Math.max(r.k, 0.05)) : 0.9;
 }
 
 /* Scattered by the golden ratio rather than spread evenly across the cycle.
@@ -409,24 +422,38 @@ function buildLane(spec) {
      stop a photon that has no work function to climb. Asking the model that
      way rather than retyping its formula keeps one source for it.
 
-     The consequence is worth the whole change. At the same brightness, RED
-     light arrives in more photons than violet - each one is worth less, so
-     there are more of them for the same power. Slide 3's red lane now shows
-     seven photons landing and not one electron leaving, while violet shows
-     four and four. "It is not how many, it is how much each one carries" is
-     no longer a sentence under the picture; it is the picture. */
+     Slide 2 is where that earns its keep. At the same brightness, RED light
+     arrives in MORE photons than violet - each one is worth less, so there
+     are more of them for the same power - and its lane shows fourteen
+     landing against violet's eight, with not one electron leaving. "It is
+     not how many, it is how much each one carries" stops being a sentence
+     under the picture and becomes the picture.
+
+     Slide 3 deliberately does the opposite and equalises the count, because
+     there the photon number is a distraction from the one variable that
+     slide is about. See sameFlux(). */
   const arrivals = dotCount(physics(spec.wavelength, spec.intensity, 0));
   const n        = dotCount(r);          /* electrons: 0 when nothing escapes */
   const id       = 'ln' + (laneSeq++);
 
   /* Every photon crosses in the same time, whatever its colour, because they
      all travel at the same speed. Only the electron's flight depends on what
-     it was given. */
-  const escape = n ? 1.273 / Math.sqrt(Math.max(r.k, 0.05)) : 0.9;
-  const cycle  = PACKET.flight + escape;
+     it was given.
+   *
+   * THE CYCLE BELONGS TO THE CARD, NOT THE LANE. A photon is only on screen
+   * while it is in flight, so the share of a lane's packets visible at any
+   * moment is flight/cycle. Let each lane set its own cycle and that share
+   * changes from lane to lane: on slide 3 the slow green lane would have
+   * shown 36% of its packets against the red lane's 65%, so a card headed
+   * "same number of photons" would have been visibly lying. One cycle for
+   * the card, long enough for its slowest electron, and the share is
+   * identical everywhere. */
+  const escape = escapeTime(r);
+  const cycle  = spec.cycle || (PACKET.flight + escape);
   const land   = PACKET.flight / cycle * 100;
+  const done   = (PACKET.flight + escape) / cycle * 100;
 
-  keyframesFor(id, land, LANE.beamLen - PACKET.len, LANE.travel);
+  keyframesFor(id, land, done, LANE.beamLen - PACKET.len, LANE.travel);
 
   const beam = svgEl('g', {
     transform: 'translate(' + LANE.impactX + ',' + LANE.surfaceY + ') '
@@ -623,8 +650,12 @@ function buildCard(card) {
   const lanes = document.createElement('div');
   lanes.className = 'lanes' + (card.stack ? ' stack' : '');
   const anyFoot = card.lanes.some(l => l.foot);
+  /* Long enough for the slowest electron on the card, so every lane can use
+     it and no lane's photons are on screen less often than its neighbour's. */
+  const cycle = PACKET.flight + Math.max.apply(null, card.lanes.map(l =>
+    escapeTime(physics(l.wavelength, l.intensity, phiOf(l.material)))));
   card.lanes.forEach(spec => lanes.appendChild(
-    buildLane(anyFoot ? Object.assign({ footRow: true }, spec) : spec)));
+    buildLane(Object.assign({ cycle: cycle }, anyFoot ? { footRow: true } : null, spec))));
 
   if (card.aside === 'spectrum') {
     /* Cases on the left, the reference strip on the right. */
@@ -719,7 +750,7 @@ function ANIMATIONS(part) {
   }];
 
   if (part === 3) return [{
-    title: 'Red, violet, ultraviolet',
+    title: 'Red, green, ultraviolet',
     /* Brightness is held OUT of this slide, not just unmentioned. It is slide
        4's subject, and on this one it was actively in the way: at equal
        power, red light arrives in more photons than violet, so the three
@@ -738,10 +769,16 @@ function ANIMATIONS(part) {
     lanes: [
       { wavelength: 700, intensity: sameFlux(700), material: 'Sodium', label: '700 nm',
         sub: 'Red',         foot: 'Nothing comes out.' },
-      { wavelength: 400, intensity: sameFlux(400), material: 'Sodium', label: '400 nm',
-        sub: 'Violet',      foot: 'Electrons come out.' },
+      /* 500 nm, not 400. Between 400 and 300 the kinetic energies are 0.80
+         and 1.83 eV, so one set of electrons leaves 1.5x quicker than the
+         other - true, and almost impossible to see. 500 nm sits just inside
+         sodium's threshold at 539, giving 0.18 eV against 1.83, and a
+         difference of 3.2x that nobody has to be told about. It also puts a
+         third colour of light on the slide instead of two violets. */
+      { wavelength: 500, intensity: sameFlux(500), material: 'Sodium', label: '500 nm',
+        sub: 'Green',       foot: 'Electrons come out, but barely.' },
       { wavelength: 300, intensity: sameFlux(300), material: 'Sodium', label: '300 nm',
-        sub: 'Ultraviolet', foot: 'Electrons come out faster.' }
+        sub: 'Ultraviolet', foot: 'Electrons come out much faster.' }
     ],
     /* No takeaway and no note: each case carries its own verdict underneath
        it, and the sentence that used to be here existed only to explain away
@@ -763,8 +800,10 @@ function ANIMATIONS(part) {
       { wavelength: 400, intensity: 100, material: 'Sodium', label: '100%',
         sub: 'Bright', foot: 'Four times as many, at the same speed.' }
     ],
-    takeaway: 'More electrons. Same speed.',
-    note: 'Four times the light, four times the rate — and not one electron faster.'
+    takeaway: 'More electrons. Same speed.'
+    /* The note read "Four times the light, four times the rate - and not one
+       electron faster", which is the takeaway above it plus two numbers the
+       two lanes already print. */
   }];
 
   if (part === 5) return [{
@@ -776,8 +815,10 @@ function ANIMATIONS(part) {
       { wavelength: 400, intensity: 50, material: 'Sodium', label: 'Sodium',
         foot: 'The same photon is enough here.' }
     ],
-    takeaway: 'Same photons. A lower barrier lets them out.',
-    note: 'The light has not changed at all between these two lanes.'
+    takeaway: 'Same photons. A lower barrier lets them out.'
+    /* The note read "The light has not changed at all between these two
+       lanes", which the card's own header already states as a condition and
+       the takeaway states as a conclusion. */
   }];
 
   return null;

@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '22';
+const BUILD = '23';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=22">
+<link rel="stylesheet" href="theme.css?v=23">
 <style>
 html, body { height: 100%; }
 
@@ -275,6 +275,12 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 
 /* Kmax, and "No emission" with it: the same quantity, reading zero. */
 .lane-result { white-space: nowrap; font-size: 1.05em; color: var(--chalk-amber); }
+
+/* The line that covers the whole card is centred on the whole card; the
+   verdict for one case is centred on that case. Either way a caption sits
+   under the middle of whatever it is talking about, so which one it belongs
+   to is never in question. */
+.takeaway { text-align: center; }
 
 /* The verdict for one case, under that case and centred on it - the drawing
    above it is centred too, and a caption ranged left under a centred picture
@@ -631,7 +637,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=22" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=23" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -702,10 +708,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=22"></script>
-<script src="questions.js?v=22"></script>
-<script src="anim.js?v=22"></script>
-<script src="live.js?v=22"></script>
+<script src="physics.js?v=23"></script>
+<script src="questions.js?v=23"></script>
+<script src="anim.js?v=23"></script>
+<script src="live.js?v=23"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -816,7 +822,8 @@ const PARTS = [
          Saying the mechanism instead carries the same caveat - it states the
          assumption rather than naming it - and explains WHY more light
          cannot help, which the hedge never did. */
-      'Each electron absorbs one photon, so more photons mean more chances — never a bigger one.'
+      'Each electron absorbs one photon, so more photons free more electrons — '
+        + 'but the energy each one leaves with is unchanged.'
     ] }]
   },
 
