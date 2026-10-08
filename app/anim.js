@@ -243,6 +243,13 @@ function keyframesFor(id, landPct, startX, travel) {
    the same height. Photon arrivals are not evenly spaced in reality either. */
 function phaseOf(i, n) { return (i * 0.6180339887) % 1; }
 
+function el2(tag, cls, text) {
+  const n = document.createElement(tag);
+  n.className = cls;
+  n.textContent = text;
+  return n;
+}
+
 function svgEl(name, attrs) {
   const n = document.createElementNS('http://www.w3.org/2000/svg', name);
   Object.keys(attrs || {}).forEach(k => n.setAttribute(k, attrs[k]));
@@ -302,10 +309,34 @@ function buildLane(spec) {
   const strong = document.createElement('strong');
   strong.textContent = spec.label;
   strong.style.color = labelColor(spec.wavelength);
-  const span = document.createElement('span');
-  span.textContent = spec.sub || '';
   name.appendChild(strong);
-  name.appendChild(span);
+
+  /* ONE QUANTITY, ONE COLOUR, EVERYWHERE.
+   *   photon energy  blue     - what arrives
+   *   work function  white    - what it has to beat
+   *   Kmax           amber    - what is left over, and "No emission", which
+   *                             is the same quantity reading zero
+   * A reader who learns the three colours on slide 1 can read every later
+   * slide without the words. */
+  if (spec.sub) {
+    const span = document.createElement('span');
+    span.textContent = spec.sub;
+    name.appendChild(span);
+  }
+  if (spec.show !== 'energy') {
+    /* The photon's energy, then how it compares with the barrier. Saying it
+       with < and > rather than "below" and "above" puts both numbers on
+       screen and lets the room do the comparison. */
+    const ev = document.createElement('span');
+    ev.className = 'ev';
+    ev.textContent = r.energy.toFixed(2) + ' eV';
+    name.appendChild(ev);
+
+    const cmp = document.createElement('span');
+    cmp.className = 'cmp';
+    cmp.textContent = (r.emits ? '> ' : '< ') + r.phi.toFixed(2) + ' eV';
+    name.appendChild(cmp);
+  }
   head.appendChild(name);
 
   const result = document.createElement('div');
@@ -443,8 +474,9 @@ function buildLane(spec) {
   }
   lane.appendChild(svg);
 
-  result.textContent = resultText(spec, r);
-  if (n === 0) result.classList.add('none');
+  /* A verdict under its own case, rather than one sentence under three of
+     them trying to cover all of them at once. */
+  if (spec.foot) lane.appendChild(el2('div', 'lane-foot', spec.foot));
 
   return lane;
 }
@@ -557,7 +589,16 @@ function buildCard(card) {
 
   const held = document.createElement('p');
   held.className = 'held';
-  held.textContent = card.held;
+  if (Array.isArray(card.held)) {
+    card.held.forEach(part => {
+      const sp = document.createElement('span');
+      if (part.c) sp.className = part.c;
+      sp.textContent = part.t;
+      held.appendChild(sp);
+    });
+  } else {
+    held.textContent = card.held;
+  }
   el.appendChild(held);
 
   /* The cases sit side by side - left, middle, right - because each one is
@@ -581,10 +622,12 @@ function buildCard(card) {
     el.appendChild(lanes);
   }
 
-  const take = document.createElement('strong');
-  take.className = 'takeaway';
-  take.textContent = card.takeaway;
-  el.appendChild(take);
+  if (card.takeaway) {
+    const take = document.createElement('strong');
+    take.className = 'takeaway';
+    take.textContent = card.takeaway;
+    el.appendChild(take);
+  }
 
   if (card.note) {
     const note = document.createElement('p');
@@ -609,10 +652,9 @@ function ANIMATIONS(part) {
 
   if (part === 1) return [{
     title: 'Shorter wavelength, more energy',
-    held: 'The light on its own — before it reaches anything',
     lanes: [
-      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm', sub: 'Red',    show: 'energy' },
-      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Violet', show: 'energy' }
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm', sub: 'Red photon',    show: 'energy' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Violet photon', show: 'energy' }
     ],
     aside: 'spectrum',
     /* Side by side these two would be 281px each next to a spectrum, and the
@@ -622,38 +664,44 @@ function ANIMATIONS(part) {
     /* "Same beam, different photons" was simply untrue: these are two
        different beams. What is actually being shown is that the colour, and
        nothing else, fixes what one photon is worth. */
-    takeaway: 'The colour sets what every photon in the beam is worth.',
-    note: 'The tighter the wave, the more energy each photon carries.'
+    takeaway: 'The colour sets what every photon in the beam is worth.'
   }];
 
   if (part === 2) return [{
     title: 'Enough energy, or not',
     /* Every number here is read off physics(), including the work function,
        which comes from MATERIALS through phiOf(). */
-    held: 'Sodium · φ = ' + phiOf('Sodium').toFixed(2) + ' eV · same brightness',
+    /* The barrier every lane is measured against, called out rather than
+       mentioned: it is the number the whole card turns on. */
+    held: [{ t: 'Sodium · ' },
+           { t: 'φ = ' + phiOf('Sodium').toFixed(2) + ' eV', c: 'phi' },
+           { t: ' · same brightness' }],
     lanes: [
-      /* A WAVELENGTH is not above or below a work function - a photon's
-         ENERGY is. Naming the energy is both more correct and more use: it
-         puts 1.77 and 3.10 next to 2.30 and lets the room do the comparison
-         itself rather than being told the answer. */
-      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm',
-        sub: 'photon ' + evAt(700) + ' — below φ' },
-      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm',
-        sub: 'photon ' + evAt(400) + ' — above φ' }
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm' }
     ],
-    takeaway: 'Below the barrier, nothing comes out at all.',
-    note: 'Sodium needs 2.30 eV. The red photon brings 1.77 eV and is turned away.'
+    takeaway: 'Below the barrier, nothing comes out at all.'
+    /* The note used to read "Sodium needs 2.30 eV. The red photon brings
+       1.77 eV and is turned away." Both rows now print exactly that, with the
+       comparison in between, so the sentence had become a transcript of the
+       line above it. */
   }];
 
   if (part === 3) return [{
     title: 'Red, violet, ultraviolet',
-    held: 'Sodium · same brightness',
+    held: [{ t: 'Sodium · ' },
+           { t: 'φ = ' + phiOf('Sodium').toFixed(2) + ' eV', c: 'phi' },
+           { t: ' · same brightness' }],
     lanes: [
-      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm', sub: 'Red' },
-      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm', sub: 'Violet' },
-      { wavelength: 300, intensity: 50, material: 'Sodium', label: '300 nm', sub: 'Ultraviolet' }
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm',
+        sub: 'Red',         foot: 'Nothing comes out.' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm',
+        sub: 'Violet',      foot: 'Electrons come out.' },
+      { wavelength: 300, intensity: 50, material: 'Sodium', label: '300 nm',
+        sub: 'Ultraviolet', foot: 'Electrons come out faster.' }
     ],
-    takeaway: 'Nothing, then electrons, then faster electrons.',
+    /* No takeaway: each case now carries its own verdict underneath it,
+       which beats one sentence trying to cover three at once. */
     /* The dots are NOT illustrative - they are the model's rate, and at a
        fixed brightness that rate falls as the wavelength shortens, because
        the same power delivered in bigger packets is fewer packets. The old

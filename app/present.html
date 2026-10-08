@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '19';
+const BUILD = '20';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=19">
+<link rel="stylesheet" href="theme.css?v=20">
 <style>
 html, body { height: 100%; }
 
@@ -224,6 +224,9 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .lane.bare { justify-content: flex-start; }
 .lane.bare .lane-head { flex-direction: row; align-items: baseline;
                         justify-content: center; gap: 1.1em; }
+/* On slide 1 the result IS the photon energy, so it takes the energy colour
+   rather than the Kmax one. */
+.lane.bare .lane-result { color: var(--chalk-cyan); }
 /* Clipped, unlike the metal lanes: the wave is drawn wider than the box on
    purpose so the loop has no seam, and that overhang must not escape onto
    the rest of the card. */
@@ -249,12 +252,27 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
              font-size: clamp(14px, 1.45vw, 22px); }
 /* Wraps rather than clips. "Below the work function" is the whole point of
    that lane, and an ellipsis in the middle of it says nothing at all. */
+/* ---- One quantity, one colour, on every slide --------------------------
+     photon energy   blue    - what arrives
+     work function   white   - what it has to beat
+     Kmax            amber   - what is left over, and "No emission", which is
+                               that same quantity reading zero
+   Learn the three on slide 1 and every later slide can be read without the
+   words. Nothing else on a blackboard may use them. */
 .lane-name { display: flex; align-items: baseline; gap: .45em; min-width: 0;
              flex-wrap: wrap; }
 .lane-name strong { font-weight: 700; white-space: nowrap; }
 .lane-name span { color: var(--chalk-dim); font-size: .88em; }
-.lane-result { white-space: nowrap; font-size: 1.05em; color: var(--emit); }
-.lane-result.none { color: var(--no-emit); }
+.lane-name .ev  { color: var(--chalk-cyan); font-size: 1em; font-weight: 600; }
+.lane-name .cmp { color: var(--chalk); font-size: .92em; white-space: nowrap; }
+.held .phi { color: var(--chalk); font-weight: 700; }
+
+/* Kmax, and "No emission" with it: the same quantity, reading zero. */
+.lane-result { white-space: nowrap; font-size: 1.05em; color: var(--chalk-amber); }
+
+/* The verdict for one case, under that case. */
+.lane-foot { flex: none; margin-top: .25em; font-family: var(--hand);
+             font-size: clamp(14px, 1.5vw, 22px); color: var(--accent); }
 
 /* meet, not slice: the drawing shrinks to the room it is given and is never
    cropped, however short the slot gets. */
@@ -604,7 +622,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=19" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=20" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -675,10 +693,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=19"></script>
-<script src="questions.js?v=19"></script>
-<script src="anim.js?v=19"></script>
-<script src="live.js?v=19"></script>
+<script src="physics.js?v=20"></script>
+<script src="questions.js?v=20"></script>
+<script src="anim.js?v=20"></script>
+<script src="live.js?v=20"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -721,13 +739,13 @@ const PARTS = [
 
   {
     title: 'Can light knock electrons out of metal?',
-    lead: 'Yes — but each photon needs enough energy.',
+    lead: 'Yes, but each photon needs enough energy.',
     groups: [{ items: [
       'Electrons need energy to escape from a metal.',
       'The minimum required energy is called the work function (φ).',
       /* "When a photon provides more than this energy, an electron can
          escape" is the two lanes below, side by side. */
-      'The remaining energy determines its maximum kinetic energy.'
+      'The remaining energy determines the electron’s maximum kinetic energy.'
     ] }],
     /* hc/lambda, not hf. The canonical form of this equation is written with
        frequency, but nothing in this talk is: every number on screen, every
@@ -740,7 +758,7 @@ const PARTS = [
 
   {
     title: 'Change the color. Change the result.',
-    lead: 'Shorter wavelength → higher photon energy.',
+    lead: 'Shorter wavelength → more energy per photon → more energy for the electron.',
     groups: [{ items: [
       /* "Below the threshold" was BACKWARDS here, and dangerously so on a
          slide whose every number is a wavelength. Sodium's threshold is
@@ -752,10 +770,13 @@ const PARTS = [
          Said in energy it is unambiguous, and the third line turns it back
          into the quantity on screen. The number is computed, never typed. */
       'A photon below the threshold energy releases nothing, however bright the light.',
-      'Above it, electrons escape.',
-      'For sodium that threshold falls at '
-        + physics(400, 50, phiOf('Sodium')).threshold.toFixed(0)
-        + ' nm — anything redder does nothing.'
+      'Above it, electrons escape, and the surplus is theirs to keep.',
+      /* Said as the work function rather than as a wavelength: the threshold
+         IS the work function, which is the idea slide 2 just introduced, and
+         naming it that way ties the two slides together instead of
+         introducing a second number to remember. */
+      'That threshold is the work function itself — '
+        + phiOf('Sodium').toFixed(2) + ' eV for sodium.'
       /* "Higher photon energy above the threshold: higher maximum electron
          speed" was the third. It is the takeaway under the board, and the
          two Kmax values, and the visibly faster dots. */
