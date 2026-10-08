@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '35';
+const BUILD = '36';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=35">
+<link rel="stylesheet" href="theme.css?v=36">
 <style>
 html, body { height: 100%; }
 
@@ -782,7 +782,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=35" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=36" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -911,7 +911,6 @@ body.joining #joined { color: var(--ink-soft); }
     <div class="readouts">
       <div><label>Photon energy</label><strong id="energy"></strong></div>
       <div><label>Maximum kinetic energy K<sub>max</sub></label><strong id="kinetic"></strong></div>
-      <div><label>Relative emission rate</label><strong id="rate"></strong></div>
     </div>
 
     <!-- The script writes a sentence into this; it restates the two numbers
@@ -923,6 +922,13 @@ body.joining #joined { color: var(--ink-soft); }
     <div hidden>
       <div id="bars"></div><svg id="graph"></svg><div id="calculation"></div>
       <div id="balance"></div><button id="comparePause"></button><button id="reset"></button>
+      <!-- The emission rate was on screen as "1.42x" with nothing to say what
+           the 1 was. It is a ratio against the slider's own starting point -
+           50% brightness at 400 nm - which is not written anywhere and which
+           an audience cannot guess. The picture already shows the rate: the
+           photons arrive at that rate and the electrons leave at it. The
+           script still writes the number here. -->
+      <strong id="rate"></strong>
       <!-- The beam is fixed at 45 degrees, so these two carry no control any
            more; the script still writes to them. -->
       <input id="angle" type="range" min="0" max="90" value="45"><output id="angleValue"></output>
@@ -932,11 +938,11 @@ body.joining #joined { color: var(--ink-soft); }
 
 </main>
 
-<script src="physics.js?v=35"></script>
-<script src="questions.js?v=35"></script>
-<script src="anim.js?v=35"></script>
-<script src="toy.js?v=35"></script>
-<script src="live.js?v=35"></script>
+<script src="physics.js?v=36"></script>
+<script src="questions.js?v=36"></script>
+<script src="anim.js?v=36"></script>
+<script src="toy.js?v=36"></script>
+<script src="live.js?v=36"></script>
 <script>
 const $ = id => document.getElementById(id);
 
