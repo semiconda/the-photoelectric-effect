@@ -776,7 +776,11 @@ function ANIMATIONS(part) {
          difference of 3.2x that nobody has to be told about. It also puts a
          third colour of light on the slide instead of two violets. */
       { wavelength: 500, intensity: sameFlux(500), material: 'Sodium', label: '500 nm',
-        sub: 'Green',       foot: 'Electrons come out, but barely.' },
+        /* "Electrons come out, but barely" meant two things at once -
+           barely escaping, or barely any of them - and the slide explains
+           neither. A caption may only name what is on screen, and what is
+           on screen is that these ones crawl. */
+        sub: 'Green',       foot: 'Electrons come out slowly.' },
       { wavelength: 300, intensity: sameFlux(300), material: 'Sodium', label: '300 nm',
         sub: 'Ultraviolet', foot: 'Electrons come out much faster.' }
     ],
