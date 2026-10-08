@@ -45,9 +45,15 @@ const /* Moved right with the angle. The beam drops 135px to the surface, so at 
 /* Close to the surface, which is what the merged slide can afford. The beam
    drops from the laser to the metal and runs the same distance sideways at
    45 degrees, so a shorter drop is a shorter beam in both directions: 85px
-   instead of 135 leaves the diagram a third less tall. x is whatever lands
-   it on the middle of the plate, 620 - 85. */
-laserOrigin={x:120,y:215};
+   instead of 135 leaves the diagram a third less tall.
+
+   x=155, not 120. The barrel runs 175px back from the muzzle and is 30 thick,
+   so at 45 degrees its far top corner sits 175*cos45 + 15*sin45 = 134px left
+   of the origin. From 120 that is x = -14: the laser was being cut off by the
+   edge. From 155 it clears it by 21px, which is the same margin the plate
+   leaves on the right (380 of 400). The beam then lands at 240, still well
+   inside the plate. */
+laserOrigin={x:155,y:215};
 let laserAngle=45,lastIntensity=50;/* FIXED. Aiming was a fourth variable on a slide about three. */
 function laserTarget(){return {x:laserOrigin.x+(300-laserOrigin.y)*Math.tan(laserAngle*Math.PI/180),y:300};}
 function syncLaser(){ $('angleValue').textContent=laserAngle.toFixed(1)+'°';$('laserPower').textContent=state.intensity>0?'Turn laser off':'Turn laser on';$('laserPower').setAttribute('aria-pressed',String(state.intensity>0)); }
