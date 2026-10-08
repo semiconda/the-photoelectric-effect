@@ -664,7 +664,12 @@ function ANIMATIONS(part) {
     /* "Same beam, different photons" was simply untrue: these are two
        different beams. What is actually being shown is that the colour, and
        nothing else, fixes what one photon is worth. */
-    takeaway: 'The colour sets what every photon in the beam is worth.'
+    /* "The colour sets what every photon in the beam is worth" said two
+       things badly: "worth" is a metaphor, and the rest of it is the card's
+       own title back again. A takeaway earns its line by saying what the
+       picture does NOT - here, that brightness is absent from all of it,
+       which is the wrong answer Q1 offers a minute later. */
+    takeaway: 'Nothing here depends on how bright the light is — only on the color.'
   }];
 
   if (part === 2) return [{
