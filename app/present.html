@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '27';
+const BUILD = '28';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=27">
+<link rel="stylesheet" href="theme.css?v=28">
 <style>
 html, body { height: 100%; }
 
@@ -164,8 +164,13 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 #explanation .formula { color: var(--ink-dark); }
 
 /* The feedback for a question, on screen only once it has been revealed. */
-.why { font-size: clamp(15px, 1.6vw, 21px); color: var(--chalk-dim);
-       max-width: 62ch; margin-top: 14px; }
+/* Wider than the answers it explains. At 62ch it was 702px against the
+   choices' 680 - near enough the same width, so it wrapped into four lines
+   of prose under four boxes and doubled the height of the reveal. Given room
+   to run it is two lines, and it reads as commentary on the answers rather
+   than a fifth answer. */
+.why { font-size: 1.15em; color: var(--chalk-dim); max-width: none;
+       width: min(1040px, 100%); text-align: center; margin-top: .7em; }
 
 /* ---- The comparison cards -----------------------------------------------
    The idiom from index.html's "What changes?": hold everything constant,
@@ -356,22 +361,32 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
    the projector while being asked.
 
    The top bar stays above it, so the presenter can still reveal or move on. */
-#question { display: none; flex: 1 1 auto; border-style: solid; border-color: var(--accent-dim); }
+/* min-height: 0 is the whole bug. A flex item defaults to min-height: auto,
+   which means "never shrink below your content" - so on a short screen this
+   slot stayed 682px tall inside a 608px window and simply hung off the
+   bottom, taking the revealed explanation with it. Its content fitted its
+   frame perfectly; the frame did not fit the screen.
+
+   Sized in em from one number, like the slides and the finale, so when the
+   room runs out the words give way rather than the frame. */
+#question { display: none; flex: 1 1 auto; min-height: 0; overflow: hidden;
+            border-style: solid; border-color: var(--accent-dim);
+            font-size: calc(clamp(13px, 1.3vw, 18px) * var(--fit, 1)); }
 body.asking #question { display: flex; }
 body.asking .parts > .slot:not(#question) { display: none; }
-#question .qtag { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
-#question .what { color: var(--chalk); font-size: clamp(26px, 3vw, 40px); }
-#question .note { font-size: clamp(14px, 1.3vw, 20px); }
+#question .qtag { font-size: .7em; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+#question .what { color: var(--chalk); font-size: 2.2em; }
+#question .note { font-size: 1.05em; }
 
 /* The choices. On reveal the correct one(s) turn green; the rest stay as they
    are rather than turning red, so the screen says "here is the answer" rather
    than "here is what you got wrong". */
-.choices { display: flex; flex-direction: column; gap: 10px; margin-top: 18px;
+.choices { display: flex; flex-direction: column; gap: .55em; margin-top: .9em;
            width: min(680px, 100%); }
 .choice {
   border: 1.5px solid var(--rule); border-radius: 10px;
-  padding: 14px 18px; text-align: left;
-  font-family: var(--hand); font-size: clamp(18px, 2vw, 24px);
+  padding: .58em .75em; text-align: left;
+  font-family: var(--hand); font-size: 1.35em;
   color: var(--chalk-dim); background: var(--board-sunk);
   transition: border-color .18s, color .18s, background .18s;
 }
@@ -719,7 +734,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=27" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=28" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -846,11 +861,11 @@ body.joining #joined { color: var(--ink-soft); }
 
 </main>
 
-<script src="physics.js?v=27"></script>
-<script src="questions.js?v=27"></script>
-<script src="anim.js?v=27"></script>
-<script src="toy.js?v=27"></script>
-<script src="live.js?v=27"></script>
+<script src="physics.js?v=28"></script>
+<script src="questions.js?v=28"></script>
+<script src="anim.js?v=28"></script>
+<script src="toy.js?v=28"></script>
+<script src="live.js?v=28"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -1048,12 +1063,18 @@ function showQuestion(q) {
      otherwise become markup on the projector. */
   $('choices').querySelectorAll('.choice')
     .forEach((el, i) => el.textContent = q.options[i]);
+  /* Called straight away, not inside requestAnimationFrame: reading a
+     bounding rect forces the reflow it needs, and a frame callback is one
+     more thing that has to happen for the slide to be right. */
+  fitQuestion();
 }
 
 function markCorrect(q) {
   const els = $('choices').querySelectorAll('.choice');
   correctIndices(q).forEach(i => { if (els[i]) els[i].classList.add('correct'); });
   if (q.why) $('qwhy').hidden = false;
+  /* The reveal adds a paragraph, so what fitted a moment ago may not now. */
+  fitQuestion();
 }
 
 /* ---- The stage ---------------------------------------------------------- */
@@ -1183,6 +1204,30 @@ function shrinkToFit(box) {
   return true;
 }
 
+/* The question slot centres its content, so when there is too much it spills
+   equally off the top AND the bottom - and scrollHeight only counts what is
+   below the padding box, so it reports no overflow at all. shrinkToFit is
+   blind to it. This measures the children instead: top of the first to the
+   bottom of the last, against the frame. */
+function fitQuestion() {
+  const box = $('question');
+  const span = () => {
+    const kids = Array.prototype.filter.call(box.children,
+      el => el.getBoundingClientRect().height > 0);
+    if (!kids.length) return 0;
+    const first = kids[0].getBoundingClientRect();
+    const last  = kids[kids.length - 1].getBoundingClientRect();
+    return last.bottom - first.top;
+  };
+  let fit = 1;
+  box.style.setProperty('--fit', '1');
+  for (let i = 0; i < 16 && span() > box.clientHeight - 4; i++) {
+    fit -= 0.05;
+    if (fit < 0.55) break;
+    box.style.setProperty('--fit', fit.toFixed(2));
+  }
+}
+
 /* Shrinking the words is the first move. If that is not enough - a short
    screen, a dense slide - take the room from the PICTURE instead and try
    again, because half a picture still teaches and half a sentence does not.
@@ -1212,6 +1257,7 @@ function watchFit() {
   const refit = () => {
     if (box.classList.contains('filled')) fitExplanation(box);
     if (document.body.classList.contains('finale')) shrinkToFit($('finale'));
+    if (document.body.classList.contains('asking')) fitQuestion();
   };
 
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
@@ -1230,6 +1276,7 @@ function watchFit() {
     });
     ro.observe(box);
     ro.observe(card);
+    ro.observe($('question'));
   }
 }
 
