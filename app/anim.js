@@ -475,8 +475,15 @@ function buildLane(spec) {
   lane.appendChild(svg);
 
   /* A verdict under its own case, rather than one sentence under three of
-     them trying to cover all of them at once. */
-  if (spec.foot) lane.appendChild(el2('div', 'lane-foot', spec.foot));
+     them trying to cover all of them at once.
+   *
+   * Every lane in a card that has ANY caption gets the row, empty or not.
+   * Without that the captioned lane is shorter than its neighbours, its
+   * drawing scales down to fit, and the metal surfaces - the one thing the
+   * eye tracks straight across a card - stop lining up. */
+  if (spec.foot || spec.footRow) {
+    lane.appendChild(el2('div', 'lane-foot', spec.foot || ' '));
+  }
 
   return lane;
 }
@@ -583,9 +590,17 @@ function buildCard(card) {
   const el = document.createElement('article');
   el.className = 'card' + (card.aside ? ' wide' : '');
 
+  /* Title and conditions on one line. They are two different things - what
+     is being compared, and what is being held still while it is - so the
+     conditions keep their own smaller, dimmer format and are separated by
+     the same dot that separates them from each other. On a narrow card the
+     line wraps and it falls back to two, which is where it started. */
+  const header = document.createElement('div');
+  header.className = 'cardhead';
+
   const h = document.createElement('h3');
   h.textContent = card.title;
-  el.appendChild(h);
+  header.appendChild(h);
 
   const held = document.createElement('p');
   held.className = 'held';
@@ -599,14 +614,17 @@ function buildCard(card) {
   } else {
     held.textContent = card.held;
   }
-  el.appendChild(held);
+  if (card.held) header.appendChild(held);
+  el.appendChild(header);
 
   /* The cases sit side by side - left, middle, right - because each one is
      now a tall picture: light coming down onto a surface and electrons
      leaving it. Stacked, three of those would be three slivers. */
   const lanes = document.createElement('div');
   lanes.className = 'lanes' + (card.stack ? ' stack' : '');
-  card.lanes.forEach(spec => lanes.appendChild(buildLane(spec)));
+  const anyFoot = card.lanes.some(l => l.foot);
+  card.lanes.forEach(spec => lanes.appendChild(
+    buildLane(anyFoot ? Object.assign({ footRow: true }, spec) : spec)));
 
   if (card.aside === 'spectrum') {
     /* Cases on the left, the reference strip on the right. */
@@ -641,6 +659,11 @@ function buildCard(card) {
 /* ---- What each slide shows ---------------------------------------------
    Work functions are looked up by name through phiOf() in questions.js, so a
    lane can never draw a material the simulation does not have. */
+
+/* The intensity at which a given colour delivers the same number of photons
+   per second as 400 nm does at 50%. Inverted straight out of the model's own
+   rate, (I/50)(lambda/400), rather than picked by eye. */
+function sameFlux(wavelength) { return 50 * 400 / wavelength; }
 
 /* A photon energy at some wavelength, for a caption. Read off physics(),
    like every other number on a card. */
@@ -682,10 +705,13 @@ function ANIMATIONS(part) {
            { t: 'φ = ' + phiOf('Sodium').toFixed(2) + ' eV', c: 'phi' },
            { t: ' · same brightness' }],
     lanes: [
-      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm' },
+      /* The verdict goes under the case it is about, centred on it, rather
+         than along the bottom of a card where only one of the two lanes is
+         what it is talking about. */
+      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm',
+        foot: 'Below the barrier, nothing comes out at all.' },
       { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm' }
     ],
-    takeaway: 'Below the barrier, nothing comes out at all.'
     /* The note used to read "Sodium needs 2.30 eV. The red photon brings
        1.77 eV and is turned away." Both rows now print exactly that, with the
        comparison in between, so the sentence had become a transcript of the
@@ -694,50 +720,65 @@ function ANIMATIONS(part) {
 
   if (part === 3) return [{
     title: 'Red, violet, ultraviolet',
+    /* Brightness is held OUT of this slide, not just unmentioned. It is slide
+       4's subject, and on this one it was actively in the way: at equal
+       power, red light arrives in more photons than violet, so the three
+       lanes showed 14, 8 and 6 - a difference with nothing to do with what
+       the slide is about, which then needed a sentence underneath to explain
+       it away. Equal PHOTON RATE instead, so every lane sends the same number
+       and the only thing that differs between them is the colour.
+
+       The intensity that achieves it is computed, not chosen: rate is
+       (I/50)(lambda/400), so I = 50x400/lambda makes it 1 everywhere. Kmax
+       and whether anything is emitted do not depend on intensity at all, so
+       nothing else on the card moves. */
     held: [{ t: 'Sodium · ' },
            { t: 'φ = ' + phiOf('Sodium').toFixed(2) + ' eV', c: 'phi' },
-           { t: ' · same brightness' }],
+           { t: ' · same number of photons' }],
     lanes: [
-      { wavelength: 700, intensity: 50, material: 'Sodium', label: '700 nm',
+      { wavelength: 700, intensity: sameFlux(700), material: 'Sodium', label: '700 nm',
         sub: 'Red',         foot: 'Nothing comes out.' },
-      { wavelength: 400, intensity: 50, material: 'Sodium', label: '400 nm',
+      { wavelength: 400, intensity: sameFlux(400), material: 'Sodium', label: '400 nm',
         sub: 'Violet',      foot: 'Electrons come out.' },
-      { wavelength: 300, intensity: 50, material: 'Sodium', label: '300 nm',
+      { wavelength: 300, intensity: sameFlux(300), material: 'Sodium', label: '300 nm',
         sub: 'Ultraviolet', foot: 'Electrons come out faster.' }
     ],
-    /* No takeaway: each case now carries its own verdict underneath it,
-       which beats one sentence trying to cover three at once. */
-    /* The dots are NOT illustrative - they are the model's rate, and at a
-       fixed brightness that rate falls as the wavelength shortens, because
-       the same power delivered in bigger packets is fewer packets. The old
-       caption waved that away; the picture is more interesting than the
-       hand-wave, so it says what is actually happening. */
-    note: 'Same brightness means fewer photons when each one carries more: '
-        + 'fewer electrons, each of them faster.'
+    /* No takeaway and no note: each case carries its own verdict underneath
+       it, and the sentence that used to be here existed only to explain away
+       photon counts that no longer differ. */
   }];
 
-  if (part === 4) return [
-    {
-      title: 'More light',
-      held: 'Sodium · same wavelength (400 nm)',
-      lanes: [
-        { wavelength: 400, intensity: 25,  material: 'Sodium', label: '25%',  sub: 'Dim' },
-        { wavelength: 400, intensity: 100, material: 'Sodium', label: '100%', sub: 'Bright' }
-      ],
-      takeaway: 'More electrons. Same speed.',
-      note: 'Four times the light, four times the rate — and not one electron faster.'
-    },
-    {
-      title: 'A different metal',
-      held: 'Same light · 400 nm · same brightness',
-      lanes: [
-        { wavelength: 400, intensity: 50, material: 'Copper', label: 'Copper', sub: 'φ = 4.70 eV' },
-        { wavelength: 400, intensity: 50, material: 'Sodium', label: 'Sodium', sub: 'φ = 2.30 eV' }
-      ],
-      takeaway: 'Same photons. A lower barrier lets them out.',
-      note: 'The light has not changed at all between these two lanes.'
-    }
-  ];
+  /* One card a slide now, not two side by side. Two cards sharing a stage
+     left each lane about 280px wide, which is where the drawings started
+     having to be tiny to fit. A slide each, and every lane gets twice the
+     room. */
+  if (part === 4) return [{
+    title: 'Dim against bright',
+    held: [{ t: 'Sodium · ' },
+           { t: 'φ = ' + phiOf('Sodium').toFixed(2) + ' eV', c: 'phi' },
+           { t: ' · same wavelength, 400 nm' }],
+    lanes: [
+      { wavelength: 400, intensity: 25,  material: 'Sodium', label: '25%',
+        sub: 'Dim',    foot: 'A few electrons.' },
+      { wavelength: 400, intensity: 100, material: 'Sodium', label: '100%',
+        sub: 'Bright', foot: 'Four times as many, at the same speed.' }
+    ],
+    takeaway: 'More electrons. Same speed.',
+    note: 'Four times the light, four times the rate — and not one electron faster.'
+  }];
+
+  if (part === 5) return [{
+    title: 'Copper against sodium',
+    held: 'Same light · 400 nm · same brightness',
+    lanes: [
+      { wavelength: 400, intensity: 50, material: 'Copper', label: 'Copper',
+        foot: 'The photon cannot pay the price.' },
+      { wavelength: 400, intensity: 50, material: 'Sodium', label: 'Sodium',
+        foot: 'The same photon is enough here.' }
+    ],
+    takeaway: 'Same photons. A lower barrier lets them out.',
+    note: 'The light has not changed at all between these two lanes.'
+  }];
 
   return null;
 }

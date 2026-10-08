@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '21';
+const BUILD = '22';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,7 +29,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=21">
+<link rel="stylesheet" href="theme.css?v=22">
 <style>
 html, body { height: 100%; }
 
@@ -188,8 +188,14 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .cards.one .card { max-width: 1240px; }
 .card h3 { flex: none; font-family: var(--hand); font-weight: 400;
            font-size: clamp(19px, 2.2vw, 31px); color: var(--chalk); margin: 0 0 2px; }
-.card .held { flex: none; font-size: clamp(13px, 1.3vw, 19px);
-              color: var(--chalk-dim); margin: 0 0 4px; }
+/* Title and conditions share a line. The dot is drawn here rather than put
+   in the text, so the data stays the data and the separator stays typography
+   - and it disappears by itself if the line ever wraps to two. */
+.cardhead { flex: none; display: flex; flex-wrap: wrap; align-items: baseline;
+            gap: .5em; margin: 0 0 4px; }
+.card .held { flex: 0 1 auto; font-size: clamp(13px, 1.3vw, 19px);
+              color: var(--chalk-dim); margin: 0; }
+.cardhead .held::before { content: '· '; }
 
 /* Slide 1: the two waves on the left, the reference spectrum on the right. */
 .cardrow { display: flex; gap: 26px; flex: 1 1 auto; min-height: 0; align-items: stretch; }
@@ -270,8 +276,11 @@ body { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 /* Kmax, and "No emission" with it: the same quantity, reading zero. */
 .lane-result { white-space: nowrap; font-size: 1.05em; color: var(--chalk-amber); }
 
-/* The verdict for one case, under that case. */
-.lane-foot { flex: none; margin-top: .25em; font-family: var(--hand);
+/* The verdict for one case, under that case and centred on it - the drawing
+   above it is centred too, and a caption ranged left under a centred picture
+   looks like it belongs to the one next door. */
+.lane-foot { flex: none; margin-top: .25em; text-align: center;
+             font-family: var(--hand);
              font-size: clamp(14px, 1.5vw, 22px); color: var(--accent); }
 
 /* meet, not slice: the drawing shrinks to the room it is given and is never
@@ -622,7 +631,7 @@ body.joining #joined { color: var(--ink-soft); }
 <!-- Always on screen, so someone arriving mid-talk can join without the
      presenter stopping. Larger on part 0, where joining is the point. -->
 <a class="joinqr" id="joinqr" href="quiz.html" target="_blank" rel="noopener">
-  <img src="qr-quiz.png?v=21" alt="QR code to join the quiz">
+  <img src="qr-quiz.png?v=22" alt="QR code to join the quiz">
   <span>scan to join</span>
 </a>
 
@@ -693,10 +702,10 @@ body.joining #joined { color: var(--ink-soft); }
   </div>
 </main>
 
-<script src="physics.js?v=21"></script>
-<script src="questions.js?v=21"></script>
-<script src="anim.js?v=21"></script>
-<script src="live.js?v=21"></script>
+<script src="physics.js?v=22"></script>
+<script src="questions.js?v=22"></script>
+<script src="anim.js?v=22"></script>
+<script src="live.js?v=22"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -753,7 +762,11 @@ const PARTS = [
        audience convert in their heads between the slide and the board is a
        cost paid for a convention they have not been taught. */
     formula: 'Kₘₐₓ = hc/λ − φ',
-    closing: 'Photon energy = work function + maximum electron kinetic energy'
+    /* Read in the same direction as the formula above it. "Photon energy =
+       work function + maximum kinetic energy" is the same statement
+       rearranged, and a reader checking one against the other had to do the
+       rearranging in their head to see that. */
+    closing: 'Maximum electron kinetic energy = photon energy − work function'
   },
 
   {
@@ -770,7 +783,7 @@ const PARTS = [
          Said in energy it is unambiguous, and the third line turns it back
          into the quantity on screen. The number is computed, never typed. */
       'A photon below the threshold energy releases nothing, however bright the light.',
-      'Above it, electrons escape, and the surplus is theirs to keep.',
+      'Above it, electrons escape, and whatever energy is left over becomes their kinetic energy.',
       /* Said as the work function rather than as a wavelength: the threshold
          IS the work function, which is the idea slide 2 just introduced, and
          naming it that way ties the two slides together instead of
@@ -786,29 +799,34 @@ const PARTS = [
   },
 
   {
-    title: 'More light? A different metal?',
-    groups: [
-      { head: 'Change the intensity:', items: [
-        /* The mechanism, which the board cannot draw - you see more dots, not
-           more photons arriving. */
-        'At a fixed wavelength, brighter light delivers more photons per second.',
-        /* "Above the threshold, more electrons escape" and "their maximum
-           kinetic energy stays the same" were here. That pair is the left
-           card's takeaway, word for word: "More electrons. Same speed." */
-        /* The caveat stays: the board shows 400 nm twice, never dim red, so
-           this is the one case it does not cover. */
-        /* "energy", not bare "threshold" - see slide 3. */
-        'Below the threshold energy, increasing intensity does not cause emission in the single-photon model.'
-      ] },
-      { head: 'Change the material:', items: [
-        'Different metals have different work functions.',
-        'A lower work function makes electron emission easier.'
-        /* "The same light may work on one metal but not another" is the right
-           card: same beam, copper blocked, sodium emitting. */
-      ] }
-    ]
-    /* The worked example - "Same light at 400 nm / Sodium -> emission /
-       Copper -> no emission" - was that same right card in words. */
+    title: 'More light?',
+    lead: 'Brighter light sends more photons — not stronger ones.',
+    groups: [{ items: [
+      'At a fixed wavelength, brighter light delivers more photons per second.',
+      /* This replaces "below the threshold energy, increasing intensity does
+         not cause emission in the single-photon model".
+         
+         That qualifier was load-bearing, not padding: one electron absorbs
+         one photon, so a dim beam and a blinding one offer the same deal per
+         photon. At laser intensities an electron CAN absorb two at once and
+         escape below the one-photon threshold, so without the hedge the
+         sentence is strictly false. But "the single-photon model" is a term
+         the room has not been given, and hedging teaches nothing.
+         
+         Saying the mechanism instead carries the same caveat - it states the
+         assumption rather than naming it - and explains WHY more light
+         cannot help, which the hedge never did. */
+      'Each electron absorbs one photon, so more photons mean more chances — never a bigger one.'
+    ] }]
+  },
+
+  {
+    title: 'A different metal?',
+    lead: 'Every metal holds its electrons with its own grip.',
+    groups: [{ items: [
+      'Different metals have different work functions.',
+      'A lower work function makes electron emission easier.'
+    ] }]
   },
 
   /* Slide 5's text is in the end card, not here: the slots are hidden on this
