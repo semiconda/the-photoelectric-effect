@@ -671,7 +671,7 @@ function buildCard(card) {
      now a tall picture: light coming down onto a surface and electrons
      leaving it. Stacked, three of those would be three slivers. */
   const lanes = document.createElement('div');
-  lanes.className = 'lanes' + (card.stack ? ' stack' : '');
+  lanes.className = 'lanes lanes-' + card.lanes.length + (card.stack ? ' stack' : '');
   const anyFoot = card.lanes.some(l => l.foot);
   /* Long enough for the slowest electron on the card, so every lane can use
      it and no lane's photons are on screen less often than its neighbour's. */
@@ -743,12 +743,10 @@ function ANIMATIONS(part) {
     /* "Same beam, different photons" was simply untrue: these are two
        different beams. What is actually being shown is that the colour, and
        nothing else, fixes what one photon is worth. */
-    /* "The colour sets what every photon in the beam is worth" said two
-       things badly: "worth" is a metaphor, and the rest of it is the card's
-       own title back again. A takeaway earns its line by saying what the
-       picture does NOT - here, that brightness is absent from all of it,
-       which is the wrong answer Q1 offers a minute later. */
-    takeaway: 'Nothing here depends on how bright the light is — only on the color.'
+    /* No takeaway. Two have been tried here and both were wrong: one was the
+       card's own title said again, the other raised brightness on the one
+       card that does not mention it. The two waves and the spectrum say what
+       this slide has to say. */
   }];
 
   if (part === 2) return [{
@@ -775,7 +773,7 @@ function ANIMATIONS(part) {
   }];
 
   if (part === 3) return [{
-    title: 'Red, green, ultraviolet',
+    title: 'Different color, different energy',
     /* Brightness is held OUT of this slide, not just unmentioned. It is slide
        4's subject, and on this one it was actively in the way: at equal
        power, red light arrives in more photons than violet, so the three
