@@ -249,3 +249,113 @@ select {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ===== The school sheet =================================================
+   The surface both pages share: a sheet of ruled paper, with blackboards
+   pinned to it. present.html arrived here first and still carries its own
+   copy of these tokens inline; this block is what quiz.html reads, so the
+   phone is a page of the same notebook rather than a bare dark board.
+
+   THE RULE, taken from present.html: the physics happens on slate, because
+   beams and electrons only read against a dark ground. Everything else -
+   names, scores, prompts, buttons - is ink on paper. A colour from the
+   chalk palette above is invisible on this paper, so every one of them has
+   a paper counterpart below. Never put chalk on the sheet.
+
+   NOTE: the tokens here are duplicated in present.html's inline <style>.
+   Collapsing that page onto these is a separate step, and until it happens
+   a value changed here must be changed there too. */
+:root {
+  --paper:       #fcf9f1;
+  --paper-rule:  #bdd0e6;   /* the ruled lines  */
+  --paper-marg:  #e09a9a;   /* the margin rule  */
+  --paper-edge:  #d6d2c6;
+
+  --slate:       #16211d;   /* the blackboard itself */
+  --frame:       #7d5c39;   /* its wooden frame      */
+
+  /* ONE number for the margin: it draws the red rule and it sets where the
+     content starts. The moment those two disagree it stops being a margin.
+     It scales with the viewport, so the proportion survives a phone, a
+     laptop and a projector alike. */
+  --margin-x:   clamp(42px, 4.4vw, 104px);
+  --margin-gap: clamp(12px, 1.3vw, 28px);
+
+  --ink-dark:    #1b1d1f;
+  --ink-soft:    #4c535a;
+  --ink-faint:   #828a92;
+  --accent-ink:  #5a3fd0;   /* --accent is for the dark boxes; this is its
+                               paper twin, dark enough to read on white */
+
+  /* Emission green and no-emission amber, as ink. The chalk versions are
+     pale by design and come back under 3:1 on paper - measured, not
+     guessed. These are the hexes present.html already uses for the same
+     two meanings on its top bar. */
+  --emit-ink:    #0f7357;
+  --no-emit-ink: #8a5f10;
+}
+
+/* The sheet. Overrides the dark body above, which is why it comes after it.
+
+   color-scheme sits HERE rather than on :root because two dev pages load
+   this stylesheet and stay dark; a light scheme at the root would hand them
+   light scrollbars and light form widgets on a dark ground. */
+body.sheet {
+  color-scheme: light;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(to right,
+      transparent 0 var(--margin-x),
+      var(--paper-marg) var(--margin-x) calc(var(--margin-x) + 2px),
+      transparent calc(var(--margin-x) + 2px)),
+    repeating-linear-gradient(to bottom, transparent 0 33px, var(--paper-rule) 33px 34px);
+  background-attachment: fixed;
+  color: var(--ink-dark);
+}
+
+/* ---- A blackboard pinned to the page -----------------------------------
+   Slate, a wooden frame and a shadow to lift it off the paper, so it reads
+   as a board on a notebook rather than a black rectangle dropped on one.
+   The frame is a border rather than an outer element, so nothing inside it
+   has to know the frame is there. */
+.blackboard {
+  background-color: var(--slate);
+  color: var(--chalk);
+  border: 9px solid var(--frame);
+  border-radius: 7px;
+  box-shadow: 0 10px 20px rgba(60, 45, 25, .22),
+              inset 0 0 70px rgba(0, 0, 0, .34),
+              inset 0 1px 0 rgba(255, 255, 255, .05);
+  /* Chalk dust, the same two gradients the board theme uses. */
+  background-image:
+    radial-gradient(ellipse 80% 50% at 22% 18%, rgba(240,239,230,.030), transparent 70%),
+    radial-gradient(ellipse 70% 60% at 78% 82%, rgba(240,239,230,.022), transparent 65%);
+}
+
+/* ---- Ink on paper: the controls ----------------------------------------
+   button, input and select are styled for a dark ground further up. On the
+   sheet they would be dark-on-light and unreadable, so each is restated
+   here in ink on white - the same treatment present.html gives its top bar
+   and its apparatus controls. Scoped to .sheet so a dark page is untouched. */
+.sheet button, .sheet .btn {
+  color: var(--ink-dark); background: #fff; border-color: #c8cbd0;
+}
+.sheet button:hover, .sheet .btn:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
+.sheet button:active, .sheet .btn:active { background: #f4f2ec; }
+.sheet button.primary { border-color: var(--accent-ink); color: var(--accent-ink); background: #f5f2ff; }
+.sheet button.primary:hover { background: #ece7ff; }
+
+.sheet input[type="text"] {
+  color: var(--ink-dark); background: #fff; border-color: #c8cbd0;
+}
+.sheet input[type="text"]::placeholder { color: var(--ink-faint); }
+.sheet label { color: var(--ink-soft); }
+.sheet :focus-visible { outline-color: var(--accent-ink); }
+
+/* Inside a blackboard the chalk rules win back, because that is a dark
+   ground again. Without this the buttons on the question panel would come
+   out white-on-slate. */
+.blackboard button, .blackboard .btn {
+  color: var(--chalk); background: var(--board-sunk); border-color: var(--rule);
+}
+.blackboard :focus-visible { outline-color: var(--accent); }

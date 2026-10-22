@@ -16,7 +16,7 @@
 
    Guarded against looping: if the URL already names that build, stop. Offline,
    the check fails silently and the page carries on with what it has. */
-const BUILD = '36';
+const BUILD = '37';
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   .then(r => r.json())
   .then(v => {
@@ -29,74 +29,132 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
   })
   .catch(() => {});
 </script>
-<link rel="stylesheet" href="theme.css?v=36">
+<link rel="stylesheet" href="theme.css?v=37">
 <style>
 /* Phone-first. This page is opened by scanning a QR code on the projector,
-   over classroom wifi, so it stays small: no images, no libraries. */
+   over classroom wifi, so it stays small: no images, no libraries.
+
+   The surface is the school sheet from theme.css - the same one the
+   projector shows. Ink on ruled paper, with the question on a blackboard
+   pinned to it, so the phone reads as a page of the presenter's notebook
+   rather than a separate app that happens to share a font.
+
+   THE RULE, which this page inherits rather than invents: the physics goes
+   on slate, because beams and electrons only read against a dark ground.
+   Everything else - a name, a score, a prompt, a button - is ink on paper.
+   The question is the one thing here that is physics, so it is the one
+   thing on a board. */
 
 body { padding: 0; min-height: 100dvh; display: flex; flex-direction: column; }
 
-.bar {
+/* ---- The name and the score, on the paper -------------------------------
+   Named .topbar, like present.html's, and not .bar: .bar is the ENERGY BAR
+   in theme.css, a three-column grid with its own phone breakpoint. Nothing
+   had broken yet only because this page's rules come later in the cascade
+   and won. The two were one edit apart from colliding. */
+.topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 18px; border-bottom: 1px solid var(--rule-soft);
-  background: var(--board-sunk); flex: none;
+  padding: 12px 18px;
+  padding-left: calc(var(--margin-x) + var(--margin-gap));
+  border-bottom: 1.5px solid var(--paper-edge);
+  background: rgba(255,255,255,.78); flex: none;
 }
-.bar .who   { font-family: var(--hand); font-size: 18px; }
-.bar .score { font-size: 13px; color: var(--chalk-dim); white-space: nowrap; }
-body.anon .bar { display: none; }
+/* Both of these shrink rather than push. The score line carries its longest
+   form in private browsing - "12,450 pts . 4 right . will not survive a
+   reload" - which measured 252px of nowrap text and ran 94px off a 320px
+   screen. A name can be any length at all, so it ellipsises; the score
+   wraps to a second line instead, because every word of it is information
+   and none of it may be cut. */
+.topbar .who   { font-family: var(--hand); font-size: 18px; color: var(--ink-dark);
+                 flex: 0 1 auto; min-width: 0; white-space: nowrap;
+                 overflow: hidden; text-overflow: ellipsis; }
+.topbar .score { font-size: 13px; color: var(--ink-soft); line-height: 1.35;
+                 flex: 0 1 auto; min-width: 0; text-align: right; }
+body.anon .topbar { display: none; }
 
+/* Content starts where the margin rule is drawn, so the red line is a
+   margin rather than a stripe the text happens to clear. The number comes
+   from theme.css and is the same one the projector lines its title up on. */
 .screen { flex: 1 1 auto; display: none; flex-direction: column; justify-content: center;
-          gap: 18px; padding: 24px 18px 32px; }
+          gap: 18px; padding: 24px 18px 32px;
+          padding-left: calc(var(--margin-x) + var(--margin-gap)); }
 body.at-join    #join,
 body.at-wait    #wait,
 body.at-ask     #ask,
 body.at-sent    #sent,
 body.at-done    #done { display: flex; }
 
-.big  { font-family: var(--hand); font-size: clamp(26px, 8vw, 38px); line-height: 1.2; }
-.note { color: var(--chalk-dim); font-size: 15px; }
-.placeholder { color: var(--chalk-faint); font-size: 13px; }
+/* Ink, not chalk. Every one of these sits on the paper. */
+.big  { font-family: var(--hand); font-size: clamp(26px, 8vw, 38px); line-height: 1.2;
+        color: var(--ink-dark); }
+.note { color: var(--ink-soft); font-size: 15px; }
+/* --ink-soft, not --ink-faint: these lines carry real instructions, and
+   faint came back under 4.5:1 on this paper when present.html measured it. */
+.placeholder { color: var(--ink-soft); font-size: 13px; }
 
-/* ---- Choices: big tap targets, one per line ---------------------------- */
-.choices { display: flex; flex-direction: column; gap: 12px; }
+/* ---- The question: a blackboard pinned to the page ----------------------
+   The screen keeps its own padding, so paper and the margin rule stay
+   visible around the board and it reads as pinned to the page rather than
+   bleeding off the edges of it. */
+.qpanel { gap: 14px; padding: 18px 16px 20px; }
+.qpanel .qtag { font-size: 13px; letter-spacing: .16em; text-transform: uppercase;
+                color: var(--accent); }
+/* Smaller than a .big on paper: this one shares a board with four answers,
+   and the answers are what gets tapped. */
+.qpanel .big { color: var(--chalk); font-size: clamp(21px, 5.8vw, 28px); }
+
+/* ---- Choices: big tap targets, one per line -----------------------------
+   The projector's .choice, at a thumb's scale. Picked turns accent, and
+   nothing ever turns green here - the phone does not reveal the answer,
+   the front screen does. */
+.choices { display: flex; flex-direction: column; gap: 10px; }
 .choice {
   display: block; width: 100%; text-align: left;
-  font-family: var(--hand); font-size: 20px; padding: 18px 18px;
-  border: 1.5px solid var(--rule); border-radius: 12px;
-  background: var(--board-sunk); color: var(--chalk);
+  font-family: var(--hand); font-size: 18px; padding: 15px 14px;
+  border: 1.5px solid var(--rule); border-radius: 10px;
+  background: var(--board-sunk); color: var(--chalk-dim);
+  transition: border-color .18s, color .18s, background .18s;
 }
 .choice:active { background: var(--board-panel); }
 .choice[disabled] { opacity: .5; }
-.choice.picked { border-color: var(--accent); color: var(--accent); }
+.choice.picked {
+  border-color: var(--accent); color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--board-sunk));
+}
+@supports not (background: color-mix(in srgb, red 10%, blue)) {
+  .choice.picked { background: var(--board-panel); }
+}
 
 /* ---- Waiting ------------------------------------------------------------ */
-.waiting { display: flex; align-items: center; gap: 12px; color: var(--chalk-dim); }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+.waiting { display: flex; align-items: center; gap: 12px; color: var(--ink-soft); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-ink);
        animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
 
 #join input { font-size: 18px; }
 #join button { font-size: 19px; padding: 16px; width: 100%; }
 
-.tally { font-family: var(--hand); font-size: clamp(44px, 16vw, 72px); color: var(--emit); }
+/* The score, as ink. The chalk green is pale by design and disappears on
+   paper; --emit-ink is the same meaning at a weight the sheet can hold. */
+.tally { font-family: var(--hand); font-size: clamp(44px, 16vw, 72px); color: var(--emit-ink); }
 
 /* Shown when the presenter starts the next group. The switch used to be
    silent, which meant a score quietly became 0 with nothing to explain it. */
 #newgroup {
   display: none; position: fixed; inset: 0; z-index: 10;
-  background: rgba(14,18,17,.94);
+  background: rgba(252,249,241,.95);
   flex-direction: column; align-items: center; justify-content: center;
   gap: 16px; padding: 28px; text-align: center;
 }
 body.newgroup #newgroup { display: flex; }
-#newgroup .big { color: var(--accent); }
+#newgroup .big { color: var(--accent-ink); }
 #newgroup button { font-size: 19px; padding: 14px 28px; }
 
 </style>
 </head>
-<body class="anon at-join">
+<body class="sheet anon at-join">
 
-<div class="bar">
+<div class="topbar">
   <span class="who" id="who"></span>
   <span class="score" id="scoreLine"></span>
 </div>
@@ -136,11 +194,11 @@ body.newgroup #newgroup { display: flex; }
 
 <!-- 3. A question -------------------------------------------------------- -->
 <section class="screen" id="ask">
-  <div>
-    <div class="note" id="qtag"></div>
+  <div class="blackboard qpanel">
+    <div class="qtag" id="qtag"></div>
     <div class="big" id="qtext"></div>
+    <div class="choices" id="choices"></div>
   </div>
-  <div class="choices" id="choices"></div>
 </section>
 
 <!-- 4. Answer sent ------------------------------------------------------- -->
@@ -160,10 +218,10 @@ body.newgroup #newgroup { display: flex; }
   <p class="placeholder" id="doneNote"></p>
 </section>
 
-<script src="physics.js?v=36"></script>
-<script src="questions.js?v=36"></script>
-<script src="scoreboard.js?v=36"></script>
-<script src="live.js?v=36"></script>
+<script src="physics.js?v=37"></script>
+<script src="questions.js?v=37"></script>
+<script src="scoreboard.js?v=37"></script>
+<script src="live.js?v=37"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -203,7 +261,10 @@ function show(where) {
   /* Preserved across a screen change: the notice is dismissed by tapping it or
      by the next question arriving, not by the page moving on underneath it. */
   const notice = document.body.classList.contains('newgroup') ? ' newgroup' : '';
-  document.body.className = (Scoreboard.me() ? '' : 'anon ') + 'at-' + where + notice;
+  /* 'sheet' is what makes this page the school sheet, and this assignment
+     replaces the WHOLE class list - leave it out and the paper disappears
+     the first time any screen changes. */
+  document.body.className = 'sheet ' + (Scoreboard.me() ? '' : 'anon ') + 'at-' + where + notice;
 }
 
 function paintBar() {
